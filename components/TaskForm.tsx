@@ -18,7 +18,8 @@ export function TaskForm() {
     amount: 0,
     points: 0,
     member_id: '',
-    scheduled_date: formatDate(new Date()),
+    start_date: formatDate(new Date()),
+    end_date: formatDate(new Date()),
   });
 
   useEffect(() => {
@@ -61,6 +62,11 @@ export function TaskForm() {
       return;
     }
 
+    if (formData.start_date > formData.end_date) {
+      toast.error('開始日は終了日より前にしてください');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -73,7 +79,9 @@ export function TaskForm() {
           amount: formData.amount,
           points: formData.points,
           member_id: formData.member_id,
-          scheduled_date: formData.scheduled_date,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          scheduled_date: formData.start_date, // 後方互換性
           status: 'pending',
         });
 
@@ -89,7 +97,8 @@ export function TaskForm() {
         amount: 0,
         points: 0,
         member_id: members[0]?.id || '',
-        scheduled_date: formatDate(new Date()),
+        start_date: formatDate(new Date()),
+        end_date: formatDate(new Date()),
       });
 
       // ダッシュボードに遷移
@@ -208,20 +217,37 @@ export function TaskForm() {
         </div>
       </div>
 
-      {/* 日付 */}
-      <div className="card p-5">
-        <label className="label flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-accent-primary" />
-          予定日
-        </label>
-        <input
-          type="date"
-          name="scheduled_date"
-          value={formData.scheduled_date}
-          onChange={handleChange}
-          className="input"
-          required
-        />
+      {/* 開始日・終了日 */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="card p-5">
+          <label className="label flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-accent-primary" />
+            開始日
+          </label>
+          <input
+            type="date"
+            name="start_date"
+            value={formData.start_date}
+            onChange={handleChange}
+            className="input"
+            required
+          />
+        </div>
+
+        <div className="card p-5">
+          <label className="label flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-accent-warning" />
+            終了日
+          </label>
+          <input
+            type="date"
+            name="end_date"
+            value={formData.end_date}
+            onChange={handleChange}
+            className="input"
+            required
+          />
+        </div>
       </div>
 
       {/* 送信ボタン */}

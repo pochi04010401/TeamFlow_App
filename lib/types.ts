@@ -10,7 +10,7 @@ export interface Member {
   created_at: string;
 }
 
-// タスク
+// タスク (v1.1: start_date, end_date対応)
 export interface Task {
   id: string;
   title: string;
@@ -18,7 +18,9 @@ export interface Task {
   points: number;
   member_id: string;
   status: 'pending' | 'completed' | 'cancelled';
-  scheduled_date: string;
+  start_date: string;       // v1.1: 開始日
+  end_date: string;         // v1.1: 終了日
+  scheduled_date?: string;  // 後方互換性のため残す
   completed_at?: string;
   created_at: string;
   // Joinしたメンバー情報
@@ -52,18 +54,30 @@ export interface DashboardSummary {
   recentActivities: Task[];
 }
 
+// メンバー別集計 (v1.1)
+export interface MemberStats {
+  member: Member;
+  totalAmount: number;
+  completedAmount: number;
+  totalPoints: number;
+  completedPoints: number;
+  taskCount: number;
+  completedTaskCount: number;
+}
+
 // カレンダー表示用のタスク（メンバー情報付き）
 export interface CalendarTask extends Task {
   member: Member;
 }
 
-// フォーム入力
+// フォーム入力 (v1.1: start_date, end_date対応)
 export interface TaskFormData {
   title: string;
   amount: number;
   points: number;
   member_id: string;
-  scheduled_date: string;
+  start_date: string;
+  end_date: string;
 }
 
 // APIレスポンス
@@ -85,3 +99,6 @@ export interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }
+
+// ビュータイプ (v1.1)
+export type ViewMode = 'personal' | 'team';

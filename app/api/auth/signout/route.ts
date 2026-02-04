@@ -6,7 +6,8 @@ export async function POST() {
   
   await supabase.auth.signOut();
 
-  return NextResponse.redirect(new URL('/login', process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'), {
+  // v1.1: ログアウト後は /logout サンクスページへ
+  return NextResponse.redirect(new URL('/logout', process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'), {
     status: 302,
   });
 }

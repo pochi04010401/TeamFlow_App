@@ -177,3 +177,61 @@ export function getContrastColor(hexColor: string): string {
   // 輝度が高い場合は暗いテキスト、低い場合は明るいテキスト
   return luminance > 0.5 ? '#1e293b' : '#f8fafc';
 }
+
+// CSV出力（v1.1）
+import type { Task } from './types';
+
+export function exportTasksToCSV(tasks: Task[]): void {
+  // CSVヘッダー
+  const headers = [
+    'ID',
+    'タイトル',
+    '金額',
+    'ポイント',
+    '担当者',
+    'ステータス',
+    '開始日',
+    '終了日',
+    '完了日',
+    '作成日'
+  ];
+
+  // データ行を生成
+  const rows = tasks.map(task => [
+    task.id,
+    `"${task.title.replace(/"/g, '""')}"`,
+    task.amount.toString(),
+    task.points.toString(),
+    task.member?.name || '',
+    task.status,
+    task.start_date || task.scheduled_date || '',
+    task.end_date || task.scheduled_date || '',
+    task.completed_at || '',
+    task.created_at
+  ]);
+
+  // BOM付きUTF-8でCSV文字列を生成
+  const bom = '\uFEFF';
+  const csvContent = bom + [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+
+  // Blobを作成してダウンロード
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `teamflow_tasks_${formatDate(new Date())}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  URL.revokeObjectURL(url);
+}
+
+// 期間内かどうかチェック（v1.1）
+export function isDateInRange(date: Date | string, startDate: string, endDate: string): boolean {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const dateStr = formatDate(d);
+  return dateStr >= startDate && dateStr <= endDate;
+}

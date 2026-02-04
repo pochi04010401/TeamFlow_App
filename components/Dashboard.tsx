@@ -1,17 +1,55 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { TrendingUp, Zap, Activity, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { TrendingUp, Zap, Activity, CheckCircle2, Trophy, Users, User, Download } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { 
   formatCurrency, 
   formatNumber, 
   calculatePercentage, 
   getCurrentMonth,
-  formatDateJP
+  formatDateJP,
+  exportTasksToCSV
 } from '@/lib/utils';
-import type { Task, MonthlyGoal, DashboardSummary } from '@/lib/types';
+import type { Task, MonthlyGoal, DashboardSummary, MemberStats, Member, ViewMode } from '@/lib/types';
 import { ErrorDisplay } from './ErrorBoundary';
+import { toast } from 'sonner';
+
+// ビュー切り替えトグル
+function ViewToggle({ 
+  viewMode, 
+  onToggle 
+}: { 
+  viewMode: ViewMode; 
+  onToggle: (mode: ViewMode) => void;
+}) {
+  return (
+    <div className="flex items-center gap-2 p-1 rounded-xl bg-dark-700/50">
+      <button
+        onClick={() => onToggle('personal')}
+        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+          viewMode === 'personal' 
+            ? 'bg-accent-primary text-white' 
+            : 'text-dark-400 hover:text-dark-200'
+        }`}
+      >
+        <User className="w-4 h-4" />
+        <span className="text-sm font-medium">個人</span>
+      </button>
+      <button
+        onClick={() => onToggle('team')}
+        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+          viewMode === 'team' 
+            ? 'bg-accent-primary text-white' 
+            : 'text-dark-400 hover:text-dark-200'
+        }`}
+      >
+        <Users className="w-4 h-4" />
+        <span className="text-sm font-medium">全体</span>
+      </button>
+    </div>
+  );
+}
 
 // メーターコンポーネント
 function Meter({ 
@@ -79,6 +117,58 @@ function Meter({
   );
 }
 
+// メンバーランキング
+function MemberRanking({ stats, type }: { stats: MemberStats[]; type: 'amount' | 'points' }) {
+  const sortedStats = useMemo(() => {
+    return [...stats].sort((a, b) => {
+      if (type === 'amount') {
+        return b.completedAmount - a.completedAmount;
+      }
+      return b.completedPoints - a.completedPoints;
+    });
+  }, [stats, type]);
+
+  const medals = ['🥇', '🥈', '🥉'];
+
+  return (
+    <div className="card p-5">
+      <h3 className="font-medium text-dark-200 mb-4 flex items-center gap-2">
+        <Trophy className="w-5 h-5 text-accent-warning" />
+        {type === 'amount' ? '売上ランキング' : 'ポイントランキング'}
+      </h3>
+      <div className="space-y-2">
+        {sortedStats.slice(0, 5).map((stat, index) => {
+          const value = type === 'amount' ? stat.completedAmount : stat.completedPoints;
+          const formattedValue = type === 'amount' 
+            ? formatCurrency(value)
+            : `${formatNumber(value)}pt`;
+
+          return (
+            <div 
+              key={stat.member.id}
+              className="flex items-center gap-3 p-2 rounded-lg bg-dark-700/30"
+            >
+              <span className="w-6 text-center">
+                {index < 3 ? medals[index] : `${index + 1}`}
+              </span>
+              <div 
+                className="w-6 h-6 rounded-full flex-shrink-0"
+                style={{ backgroundColor: stat.member.color }}
+              />
+              <span className="flex-1 text-dark-200 text-sm truncate">
+                {stat.member.name}
+              </span>
+              <span className="text-sm font-medium text-accent-success">
+                {formattedValue}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // 最近のアクティビティ
 function RecentActivity({ tasks }: { tasks: Task[] }) {
   if (tasks.length === 0) {
@@ -105,17 +195,27 @@ function RecentActivity({ tasks }: { tasks: Task[] }) {
         {tasks.map((task) => (
           <div 
             key={task.id}
-            className="flex items-center gap-3 p-3 rounded-lg bg-dark-700/50 animate-fade-in"
+            className={`flex items-center gap-3 p-3 rounded-lg animate-fade-in ${
+              task.status === 'completed' 
+                ? 'bg-dark-700/50' 
+                : 'bg-dark-700/30 border border-accent-warning/20'
+            }`}
           >
-            <CheckCircle2 className="w-5 h-5 text-accent-success flex-shrink-0" />
+            <CheckCircle2 className={`w-5 h-5 flex-shrink-0 ${
+              task.status === 'completed' ? 'text-accent-success' : 'text-accent-warning'
+            }`} />
             <div className="flex-1 min-w-0">
-              <p className="text-dark-200 truncate">{task.title}</p>
+              <p className={`truncate ${
+                task.status === 'completed' ? 'text-dark-200' : 'text-dark-100 font-medium'
+              }`}>{task.title}</p>
               <p className="text-xs text-dark-500">
-                {task.completed_at ? formatDateJP(task.completed_at) : ''}
+                {task.completed_at ? formatDateJP(task.completed_at) : '進行中'}
               </p>
             </div>
             <div className="text-right flex-shrink-0">
-              <p className="text-sm text-accent-success font-medium">
+              <p className={`text-sm font-medium ${
+                task.status === 'completed' ? 'text-accent-success' : 'text-accent-warning'
+              }`}>
                 {formatCurrency(task.amount)}
               </p>
               <p className="text-xs text-dark-500">{task.points}pt</p>
@@ -124,6 +224,28 @@ function RecentActivity({ tasks }: { tasks: Task[] }) {
         ))}
       </div>
     </div>
+  );
+}
+
+// CSV出力ボタン
+function CSVExportButton({ tasks }: { tasks: Task[] }) {
+  const handleExport = () => {
+    if (tasks.length === 0) {
+      toast.error('エクスポートするタスクがありません');
+      return;
+    }
+    exportTasksToCSV(tasks);
+    toast.success('CSVをダウンロードしました');
+  };
+
+  return (
+    <button
+      onClick={handleExport}
+      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-dark-700 hover:bg-dark-600 transition-colors text-dark-300 hover:text-dark-100"
+    >
+      <Download className="w-4 h-4" />
+      <span className="text-sm">CSV出力</span>
+    </button>
   );
 }
 
@@ -165,8 +287,11 @@ function DashboardSkeleton() {
 
 export function Dashboard() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [memberStats, setMemberStats] = useState<MemberStats[]>([]);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('team');
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -187,7 +312,7 @@ export function Dashboard() {
         throw goalsError;
       }
 
-      // 今月のタスクを取得
+      // 今月のタスクを取得 (start_dateまたはscheduled_dateで検索)
       const startOfMonth = `${currentMonth}-01`;
       const endOfMonth = new Date(
         parseInt(currentMonth.split('-')[0]), 
@@ -197,21 +322,37 @@ export function Dashboard() {
 
       const { data: tasks, error: tasksError } = await supabase
         .from('tasks')
-        .select('*')
-        .gte('scheduled_date', startOfMonth)
-        .lte('scheduled_date', endOfMonth);
+        .select('*, member:members(*)')
+        .or(`start_date.gte.${startOfMonth},scheduled_date.gte.${startOfMonth}`)
+        .or(`end_date.lte.${endOfMonth},scheduled_date.lte.${endOfMonth}`);
 
       if (tasksError) throw tasksError;
 
-      // 最近の完了タスクを取得
+      // 最近のタスクを取得（完了優先、進行中も表示）
       const { data: recentTasks, error: recentError } = await supabase
         .from('tasks')
         .select('*')
-        .eq('status', 'completed')
-        .order('completed_at', { ascending: false })
-        .limit(3);
+        .order('completed_at', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
+        .limit(5);
 
       if (recentError) throw recentError;
+
+      // 全タスクを取得（CSV出力用）
+      const { data: allTasksData, error: allTasksError } = await supabase
+        .from('tasks')
+        .select('*, member:members(*)')
+        .order('created_at', { ascending: false });
+
+      if (allTasksError) throw allTasksError;
+
+      // メンバーを取得
+      const { data: members, error: membersError } = await supabase
+        .from('members')
+        .select('*')
+        .order('created_at');
+
+      if (membersError) throw membersError;
 
       // サマリーを計算
       const completedTasks = tasks?.filter(t => t.status === 'completed') || [];
@@ -222,6 +363,23 @@ export function Dashboard() {
       const completedPoints = completedTasks.reduce((sum, t) => sum + (t.points || 0), 0);
       const pendingPoints = pendingTasks.reduce((sum, t) => sum + (t.points || 0), 0);
 
+      // メンバー別集計
+      const stats: MemberStats[] = (members || []).map(member => {
+        const memberTasks = tasks?.filter(t => t.member_id === member.id) || [];
+        const memberCompleted = memberTasks.filter(t => t.status === 'completed');
+        const memberPending = memberTasks.filter(t => t.status === 'pending');
+
+        return {
+          member,
+          totalAmount: memberTasks.reduce((sum, t) => sum + (t.amount || 0), 0),
+          completedAmount: memberCompleted.reduce((sum, t) => sum + (t.amount || 0), 0),
+          totalPoints: memberTasks.reduce((sum, t) => sum + (t.points || 0), 0),
+          completedPoints: memberCompleted.reduce((sum, t) => sum + (t.points || 0), 0),
+          taskCount: memberTasks.length,
+          completedTaskCount: memberCompleted.length,
+        };
+      });
+
       setSummary({
         completedAmount,
         pendingAmount,
@@ -231,6 +389,8 @@ export function Dashboard() {
         targetPoints: goals?.target_points || 1000,
         recentActivities: recentTasks || [],
       });
+      setMemberStats(stats);
+      setAllTasks(allTasksData || []);
     } catch (err) {
       console.error('Dashboard fetch error:', err);
       setError('データの取得に失敗しました');
@@ -257,6 +417,12 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* ビュー切り替え & CSV出力 */}
+      <div className="flex items-center justify-between">
+        <ViewToggle viewMode={viewMode} onToggle={setViewMode} />
+        <CSVExportButton tasks={allTasks} />
+      </div>
+
       {/* 売上メーター */}
       <Meter
         label="売上"
@@ -278,6 +444,14 @@ export function Dashboard() {
         formatValue={(n) => `${formatNumber(n)}pt`}
         color="secondary"
       />
+
+      {/* メンバー別ランキング（全体ビューのみ） */}
+      {viewMode === 'team' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <MemberRanking stats={memberStats} type="amount" />
+          <MemberRanking stats={memberStats} type="points" />
+        </div>
+      )}
 
       {/* 最近のアクティビティ */}
       <RecentActivity tasks={summary.recentActivities} />

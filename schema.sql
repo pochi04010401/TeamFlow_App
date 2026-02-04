@@ -1,5 +1,6 @@
 -- ============================================
 -- TeamFlow Database Schema for Supabase
+-- Version 1.1
 -- ============================================
 
 -- Enable UUID extension
@@ -19,7 +20,7 @@ CREATE TABLE members (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- タスク・売上・ポイント
+-- タスク・売上・ポイント (v1.1: start_date, end_date追加)
 CREATE TABLE tasks (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   title TEXT NOT NULL,
@@ -27,7 +28,9 @@ CREATE TABLE tasks (
   points INTEGER DEFAULT 0,
   member_id UUID REFERENCES members(id) ON DELETE CASCADE,
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'cancelled')),
-  scheduled_date DATE NOT NULL,
+  start_date DATE NOT NULL,           -- v1.1: 開始日
+  end_date DATE NOT NULL,             -- v1.1: 終了日
+  scheduled_date DATE,                -- 後方互換性のため残す
   completed_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -54,6 +57,8 @@ CREATE TABLE allowed_emails (
 
 CREATE INDEX idx_tasks_member_id ON tasks(member_id);
 CREATE INDEX idx_tasks_status ON tasks(status);
+CREATE INDEX idx_tasks_start_date ON tasks(start_date);
+CREATE INDEX idx_tasks_end_date ON tasks(end_date);
 CREATE INDEX idx_tasks_scheduled_date ON tasks(scheduled_date);
 CREATE INDEX idx_tasks_completed_at ON tasks(completed_at);
 CREATE INDEX idx_monthly_goals_month ON monthly_goals(month);

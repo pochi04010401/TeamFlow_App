@@ -2,19 +2,20 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Calendar, PlusCircle, User } from 'lucide-react';
+import { Home, Calendar, PlusCircle, Clock, Download } from 'lucide-react';
 
 const navItems = [
   { href: '/', label: 'ホーム', icon: Home },
   { href: '/schedule', label: 'スケジュール', icon: Calendar },
+  { href: '/pending', label: '進行中', icon: Clock },
   { href: '/input', label: '登録', icon: PlusCircle },
 ];
 
 export function Navigation() {
   const pathname = usePathname();
 
-  // ログインページでは表示しない
-  if (pathname === '/login') {
+  // ログインページとログアウトページでは表示しない
+  if (pathname === '/login' || pathname === '/logout') {
     return null;
   }
 
