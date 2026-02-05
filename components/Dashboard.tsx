@@ -663,6 +663,11 @@ export function Dashboard() {
 
       {/* 最近のアクティビティ */}
       <RecentActivity tasks={filteredSummary.recentActivities} />
+
+      {/* バージョン表示 (v1.3) */}
+      <div className="flex justify-center pt-4 pb-8 opacity-20">
+        <span className="text-[10px] font-mono text-dark-500">TeamFlow v1.3</span>
+      </div>
     </div>
   );
 }
