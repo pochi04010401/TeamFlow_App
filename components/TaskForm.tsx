@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PlusCircle, Calendar, JapaneseYen, Zap, User, Loader2, ChevronDown, FileText } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -21,6 +21,16 @@ export function TaskForm({ members }: { members: Member[] }) {
     end_date: getCurrentDate(),
     notes: ''
   });
+
+  // 常に今日の日付をデフォルトにする (v1.9)
+  useEffect(() => {
+    const today = getCurrentDate();
+    setFormData(prev => ({
+      ...prev,
+      start_date: today,
+      end_date: prev.end_date < today ? today : prev.end_date
+    }));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
