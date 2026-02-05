@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PlusCircle, Calendar, JapaneseYen, Zap, User, Loader2, ChevronDown } from 'lucide-react';
+import { PlusCircle, Calendar, JapaneseYen, Zap, User, Loader2, ChevronDown, FileText } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getCurrentDate } from '@/lib/utils';
 import type { Member, TaskFormData } from '@/lib/types';
@@ -17,7 +17,8 @@ export function TaskForm({ members }: { members: Member[] }) {
     points: 0,
     member_id: members[0]?.id || '',
     start_date: getCurrentDate(),
-    end_date: getCurrentDate()
+    end_date: getCurrentDate(),
+    notes: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,6 +44,7 @@ export function TaskForm({ members }: { members: Member[] }) {
           member_id: formData.member_id,
           start_date: formData.start_date,
           end_date: formData.end_date,
+          notes: formData.notes,
           status: 'pending'
         }]);
 
@@ -57,7 +59,8 @@ export function TaskForm({ members }: { members: Member[] }) {
         ...formData,
         title: '',
         amount: 0,
-        points: 0
+        points: 0,
+        notes: ''
       });
 
       router.push('/');
@@ -187,6 +190,20 @@ export function TaskForm({ members }: { members: Member[] }) {
                   className="input-premium pl-12"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* メモ (v1.7) */}
+          <div className="space-y-2">
+            <label className="text-xs font-black uppercase text-dark-500 tracking-widest ml-1">メモ</label>
+            <div className="relative group">
+              <FileText className="absolute left-4 top-4 w-5 h-5 text-dark-500" />
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="備考や詳細内容"
+                className="input-premium pl-12 min-h-[100px] py-3 resize-none"
+              />
             </div>
           </div>
 

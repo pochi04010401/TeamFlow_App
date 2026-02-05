@@ -23,6 +23,7 @@ export interface Task {
   status: TaskStatus;
   start_date: string;       // v1.1: 開始日
   end_date: string;         // v1.1: 終了日
+  notes?: string;           // v1.7: メモ
   scheduled_date?: string;  // 後方互換性のため残す
   completed_at?: string;
   created_at: string;
@@ -82,6 +83,7 @@ export interface TaskFormData {
   member_id: string;
   start_date: string;
   end_date: string;
+  notes: string;
 }
 
 // APIレスポンス
