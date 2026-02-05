@@ -50,7 +50,7 @@ export function TaskForm({ members }: { members: Member[] }) {
         .from('tasks')
         .insert([{
           title: formData.title,
-          amount: formData.amountStr === '' ? 0 : Number(formData.amountStr),
+          amount: (formData.amountStr === '' ? 0 : Number(formData.amountStr)) * 1000, // v1.10: Convert k-yen to raw yen
           points: formData.points,
           member_id: formData.member_id,
           start_date: formData.start_date,

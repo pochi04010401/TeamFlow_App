@@ -199,7 +199,7 @@ export function TeamCalendar() {
         </div>
       </div>
 
-      <div className="card overflow-hidden shadow-2xl border-dark-700 max-h-[70vh] flex flex-col">
+      <div className="card overflow-hidden shadow-2xl border-dark-700 max-h-[80vh] flex flex-col">
         <div className="overflow-auto flex-1" ref={scrollRef}>
           <table className="w-full border-collapse table-fixed">
             <thead>

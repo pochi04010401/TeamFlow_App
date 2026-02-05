@@ -21,7 +21,7 @@ export function TaskEditModal({
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: task.title,
-    amount: task.amount,
+    amount: task.amount / 1000, // v1.10: Show in k-yen
     points: task.points,
     member_id: task.member_id,
     start_date: task.start_date,
@@ -46,6 +46,7 @@ export function TaskEditModal({
         .from('tasks')
         .update({
           ...formData,
+          amount: formData.amount * 1000, // v1.10: Save as raw yen
           scheduled_date: formData.start_date, // v1.8.3: Sync scheduled_date with start_date
           completed_at: formData.status === 'completed' ? (task.completed_at || new Date().toISOString()) : null
         })
