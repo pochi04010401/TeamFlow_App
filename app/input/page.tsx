@@ -16,6 +16,12 @@ export default async function InputPage() {
     redirect('/login');
   }
 
+  // メンバー一覧を取得 (v1.2)
+  const { data: members } = await supabase
+    .from('members')
+    .select('*')
+    .order('created_at');
+
   return (
     <div className="max-w-lg mx-auto p-4">
       {/* ヘッダー */}
@@ -26,7 +32,7 @@ export default async function InputPage() {
 
       {/* フォーム */}
       <ErrorBoundary>
-        <TaskForm />
+        <TaskForm members={members || []} />
       </ErrorBoundary>
     </div>
   );

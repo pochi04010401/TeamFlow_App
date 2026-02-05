@@ -3,8 +3,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Clock, Loader2, Check, Edit2, Users, ChevronDown } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { formatDate, formatCurrency, fireConfetti, getContrastColor } from '@/lib/utils';
-import type { Task, CalendarTask, Member } from '@/lib/types';
+import { formatDate, formatCurrency, fireConfetti } from '@/lib/utils';
+import type { CalendarTask, Member } from '@/lib/types';
 import { ErrorDisplay } from './ErrorBoundary';
 import { TaskEditModal } from './TaskEditModal';
 import { toast } from 'sonner';
@@ -181,21 +181,6 @@ export function PendingTasks() {
     setEditingTask(task);
   };
 
-  const handleTaskUpdated = (updatedTask: Task) => {
-    if (updatedTask.status !== 'pending') {
-      // ステータスが変わった場合はリストから削除
-      setTasks(prev => prev.filter(t => t.id !== updatedTask.id));
-    } else {
-      setTasks(prev => prev.map(t => 
-        t.id === updatedTask.id ? updatedTask as CalendarTask : t
-      ));
-    }
-  };
-
-  const handleTaskDeleted = (taskId: string) => {
-    setTasks(prev => prev.filter(t => t.id !== taskId));
-  };
-
   // 期限切れかどうかチェック
   const isOverdue = (task: CalendarTask): boolean => {
     const endDate = task.end_date || task.scheduled_date;
@@ -342,10 +327,9 @@ export function PendingTasks() {
       {editingTask && (
         <TaskEditModal
           task={editingTask}
-          isOpen={!!editingTask}
+          members={members}
           onClose={() => setEditingTask(null)}
-          onUpdated={handleTaskUpdated}
-          onDeleted={handleTaskDeleted}
+          onUpdate={fetchPendingTasks}
         />
       )}
     </>
