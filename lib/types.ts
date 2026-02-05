@@ -10,6 +10,9 @@ export interface Member {
   created_at: string;
 }
 
+// タスクステータス
+export type TaskStatus = 'pending' | 'completed' | 'cancelled';
+
 // タスク (v1.1: start_date, end_date対応)
 export interface Task {
   id: string;
@@ -17,7 +20,7 @@ export interface Task {
   amount: number;
   points: number;
   member_id: string;
-  status: 'pending' | 'completed' | 'cancelled';
+  status: TaskStatus;
   start_date: string;       // v1.1: 開始日
   end_date: string;         // v1.1: 終了日
   scheduled_date?: string;  // 後方互換性のため残す
