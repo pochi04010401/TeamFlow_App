@@ -67,8 +67,12 @@ export function TaskForm({ members }: { members: Member[] }) {
       router.push('/');
       router.refresh();
     } catch (err) {
-      console.error(err);
-      toast.error('登録に失敗しました');
+      console.error('Registration error details:', err);
+      const errorMessage = err instanceof Error ? err.message : '登録に失敗しました';
+      const errorCode = (err as any)?.code || 'UNKNOWN';
+      toast.error(`登録に失敗しました (${errorCode})`, {
+        description: errorMessage,
+      });
     } finally {
       setLoading(false);
     }
