@@ -113,12 +113,12 @@ export function TeamCalendar() {
         </div>
       </div>
 
-      <div className="card overflow-hidden shadow-2xl border-dark-700">
-        <div className="overflow-x-auto" ref={scrollRef}>
-          <table className="w-full border-collapse">
+      <div className="card overflow-hidden shadow-2xl border-dark-700 max-h-[70vh] flex flex-col">
+        <div className="overflow-auto flex-1" ref={scrollRef}>
+          <table className="w-full border-collapse table-fixed">
             <thead>
-              <tr className="bg-dark-900/80 sticky top-0 z-20 backdrop-blur-md">
-                <th className="p-3 text-left text-[10px] uppercase text-dark-500 font-black tracking-widest border-r border-dark-700/30 sticky left-0 bg-dark-900 z-30">日付</th>
+              <tr className="bg-dark-900/95 sticky top-0 z-40 backdrop-blur-md">
+                <th className="p-3 text-left text-[10px] uppercase text-dark-500 font-black tracking-widest border-r border-dark-700/30 sticky left-0 bg-dark-900 z-50 w-16">日付</th>
                 {members.map(m => (
                   <th key={m.id} className="p-3 text-center min-w-[120px]">
                     <div className="flex flex-col items-center gap-1">
