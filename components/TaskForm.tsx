@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PlusCircle, Calendar, DollarSign, Zap, User, Loader2, ChevronDown } from 'lucide-react';
+import { PlusCircle, Calendar, JapaneseYen, Zap, User, Loader2, ChevronDown } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getCurrentDate } from '@/lib/utils';
 import type { Member, TaskFormData } from '@/lib/types';
@@ -100,12 +100,12 @@ export function TaskForm({ members }: { members: Member[] }) {
             <div className="space-y-2">
               <label className="text-xs font-black uppercase text-dark-500 tracking-widest ml-1">売上予定 (千円)</label>
               <div className="relative group">
-                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 group-focus-within:text-accent-success transition-colors" />
+                <JapaneseYen className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 group-focus-within:text-accent-success transition-colors" />
                 <input
                   type="number"
                   inputMode="numeric"
                   required
-                  value={formData.amount === 0 ? '' : formData.amount}
+                  value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
                   placeholder="50"
                   className="input-premium pl-12"

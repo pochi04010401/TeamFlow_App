@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Trash2, Save, Loader2, Calendar, DollarSign, Zap, RefreshCcw } from 'lucide-react';
+import { X, Trash2, Save, Loader2, Calendar, JapaneseYen, Zap, RefreshCcw } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import type { Member, CalendarTask } from '@/lib/types';
 import { toast } from 'sonner';
@@ -87,14 +87,14 @@ export function TaskEditModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[10px] uppercase font-black text-dark-500 tracking-widest ml-1">売上</label>
+              <label className="text-[10px] uppercase font-black text-dark-500 tracking-widest ml-1">売上 (千円)</label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-500" />
+                <JapaneseYen className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-500" />
                 <input 
                   type="number" 
                   className="input-premium pl-9" 
                   value={formData.amount} 
-                  onChange={e => setFormData({...formData, amount: Number(e.target.value)})}
+                  onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
                 />
               </div>
             </div>
