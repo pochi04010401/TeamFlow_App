@@ -52,6 +52,7 @@ export interface DashboardSummary {
   targetAmount: number;
   targetPoints: number;
   recentActivities: Task[];
+  monthlyCompletedCount: number; // v1.2: 月間完了タスク数
 }
 
 // メンバー別集計 (v1.1)
@@ -102,3 +103,11 @@ export interface NavItem {
 
 // ビュータイプ (v1.1)
 export type ViewMode = 'personal' | 'team';
+
+// ランキング期間 (v1.2)
+export type RankingPeriod = 'monthly' | 'yearly';
+
+// カレンダー表示オプション (v1.2)
+export interface CalendarDisplayOptions {
+  hideCompleted: boolean;
+}

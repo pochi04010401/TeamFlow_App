@@ -229,9 +229,12 @@ export function exportTasksToCSV(tasks: Task[]): void {
   URL.revokeObjectURL(url);
 }
 
-// 期間内かどうかチェック（v1.1）
-export function isDateInRange(date: Date | string, startDate: string, endDate: string): boolean {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  const dateStr = formatDate(d);
-  return dateStr >= startDate && dateStr <= endDate;
+// 期間内かどうかチェック（v1.2: エイリアス）
+export function isBetween(dateStr: string, start: string, end: string): boolean {
+  return dateStr >= start && dateStr <= end;
+}
+
+// 現在の日付を取得
+export function getCurrentDate(): string {
+  return new Date().toISOString().split('T')[0];
 }

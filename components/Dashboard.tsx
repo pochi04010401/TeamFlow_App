@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { TrendingUp, Zap, Activity, CheckCircle2, Trophy, Users, User, Download } from 'lucide-react';
+import { TrendingUp, Zap, Activity, CheckCircle2, Trophy, Users, User, Download, Calendar, ChevronDown } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { 
   formatCurrency, 
@@ -11,9 +11,46 @@ import {
   formatDateJP,
   exportTasksToCSV
 } from '@/lib/utils';
-import type { Task, MonthlyGoal, DashboardSummary, MemberStats, Member, ViewMode } from '@/lib/types';
+import type { Task, MonthlyGoal, DashboardSummary, MemberStats, Member, ViewMode, RankingPeriod } from '@/lib/types';
 import { ErrorDisplay } from './ErrorBoundary';
 import { toast } from 'sonner';
+
+// メンバー選択ドロップダウン
+function MemberSelector({
+  members,
+  selectedMemberId,
+  onSelect,
+}: {
+  members: Member[];
+  selectedMemberId: string | null;
+  onSelect: (memberId: string | null) => void;
+}) {
+  const selectedMember = members.find(m => m.id === selectedMemberId);
+
+  return (
+    <div className="relative">
+      <select
+        value={selectedMemberId || ''}
+        onChange={(e) => onSelect(e.target.value || null)}
+        className="appearance-none bg-dark-700/50 border border-dark-600 rounded-xl px-4 py-2 pr-10 text-sm text-dark-200 focus:outline-none focus:border-accent-primary transition-colors cursor-pointer"
+      >
+        <option value="">全員</option>
+        {members.map(member => (
+          <option key={member.id} value={member.id}>
+            {member.name}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400 pointer-events-none" />
+      {selectedMember && (
+        <div 
+          className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full"
+          style={{ backgroundColor: selectedMember.color }}
+        />
+      )}
+    </div>
+  );
+}
 
 // ビュー切り替えトグル
 function ViewToggle({ 
@@ -46,6 +83,40 @@ function ViewToggle({
       >
         <Users className="w-4 h-4" />
         <span className="text-sm font-medium">全体</span>
+      </button>
+    </div>
+  );
+}
+
+// ランキング期間切り替え
+function RankingPeriodToggle({
+  period,
+  onToggle,
+}: {
+  period: RankingPeriod;
+  onToggle: (period: RankingPeriod) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1 p-0.5 rounded-lg bg-dark-700/50 text-xs">
+      <button
+        onClick={() => onToggle('monthly')}
+        className={`px-3 py-1 rounded-md transition-all duration-200 ${
+          period === 'monthly'
+            ? 'bg-accent-warning/20 text-accent-warning'
+            : 'text-dark-400 hover:text-dark-300'
+        }`}
+      >
+        月間
+      </button>
+      <button
+        onClick={() => onToggle('yearly')}
+        className={`px-3 py-1 rounded-md transition-all duration-200 ${
+          period === 'yearly'
+            ? 'bg-accent-warning/20 text-accent-warning'
+            : 'text-dark-400 hover:text-dark-300'
+        }`}
+      >
+        年間
       </button>
     </div>
   );
@@ -117,25 +188,75 @@ function Meter({
   );
 }
 
-// メンバーランキング
-function MemberRanking({ stats, type }: { stats: MemberStats[]; type: 'amount' | 'points' }) {
+// 月間完了集計カード (v1.2)
+function MonthlyCompletionCard({
+  count,
+  totalAmount,
+}: {
+  count: number;
+  totalAmount: number;
+}) {
+  return (
+    <div className="card p-5">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-10 h-10 rounded-xl bg-accent-primary/20 flex items-center justify-center">
+          <Calendar className="w-5 h-5 text-accent-primary" />
+        </div>
+        <div>
+          <h3 className="font-medium text-dark-200">今月の完了</h3>
+          <p className="text-xs text-dark-500">{new Date().getFullYear()}年{new Date().getMonth() + 1}月</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="text-center p-3 rounded-lg bg-dark-700/30">
+          <p className="text-2xl font-bold text-accent-success">{count}</p>
+          <p className="text-xs text-dark-400">完了タスク</p>
+        </div>
+        <div className="text-center p-3 rounded-lg bg-dark-700/30">
+          <p className="text-lg font-bold text-accent-success">{formatCurrency(totalAmount)}</p>
+          <p className="text-xs text-dark-400">完了金額</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// メンバーランキング (v1.2: 月間/年間切り替え対応)
+function MemberRanking({ 
+  stats, 
+  yearlyStats,
+  type,
+  period,
+  onPeriodChange,
+}: { 
+  stats: MemberStats[]; 
+  yearlyStats: MemberStats[];
+  type: 'amount' | 'points';
+  period: RankingPeriod;
+  onPeriodChange: (period: RankingPeriod) => void;
+}) {
+  const targetStats = period === 'monthly' ? stats : yearlyStats;
+  
   const sortedStats = useMemo(() => {
-    return [...stats].sort((a, b) => {
+    return [...targetStats].sort((a, b) => {
       if (type === 'amount') {
         return b.completedAmount - a.completedAmount;
       }
       return b.completedPoints - a.completedPoints;
     });
-  }, [stats, type]);
+  }, [targetStats, type]);
 
   const medals = ['🥇', '🥈', '🥉'];
 
   return (
     <div className="card p-5">
-      <h3 className="font-medium text-dark-200 mb-4 flex items-center gap-2">
-        <Trophy className="w-5 h-5 text-accent-warning" />
-        {type === 'amount' ? '売上ランキング' : 'ポイントランキング'}
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-medium text-dark-200 flex items-center gap-2">
+          <Trophy className="w-5 h-5 text-accent-warning" />
+          {type === 'amount' ? '売上ランキング' : 'ポイントランキング'}
+        </h3>
+        <RankingPeriodToggle period={period} onToggle={onPeriodChange} />
+      </div>
       <div className="space-y-2">
         {sortedStats.slice(0, 5).map((stat, index) => {
           const value = type === 'amount' ? stat.completedAmount : stat.completedPoints;
@@ -164,6 +285,9 @@ function MemberRanking({ stats, type }: { stats: MemberStats[]; type: 'amount' |
             </div>
           );
         })}
+        {sortedStats.length === 0 && (
+          <p className="text-dark-500 text-sm text-center py-2">データがありません</p>
+        )}
       </div>
     </div>
   );
@@ -288,10 +412,14 @@ function DashboardSkeleton() {
 export function Dashboard() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [memberStats, setMemberStats] = useState<MemberStats[]>([]);
+  const [yearlyMemberStats, setYearlyMemberStats] = useState<MemberStats[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('team');
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [rankingPeriod, setRankingPeriod] = useState<RankingPeriod>('monthly');
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -300,6 +428,7 @@ export function Dashboard() {
     try {
       const supabase = createClient();
       const currentMonth = getCurrentMonth();
+      const currentYear = new Date().getFullYear();
 
       // 月間目標を取得
       const { data: goals, error: goalsError } = await supabase
@@ -328,6 +457,19 @@ export function Dashboard() {
 
       if (tasksError) throw tasksError;
 
+      // 年間のタスクを取得 (ランキング用)
+      const startOfYear = `${currentYear}-01-01`;
+      const endOfYear = `${currentYear}-12-31`;
+
+      const { data: yearlyTasks, error: yearlyError } = await supabase
+        .from('tasks')
+        .select('*, member:members(*)')
+        .gte('completed_at', startOfYear)
+        .lte('completed_at', endOfYear)
+        .eq('status', 'completed');
+
+      if (yearlyError) throw yearlyError;
+
       // 最近のタスクを取得（完了優先、進行中も表示）
       const { data: recentTasks, error: recentError } = await supabase
         .from('tasks')
@@ -347,7 +489,7 @@ export function Dashboard() {
       if (allTasksError) throw allTasksError;
 
       // メンバーを取得
-      const { data: members, error: membersError } = await supabase
+      const { data: membersData, error: membersError } = await supabase
         .from('members')
         .select('*')
         .order('created_at');
@@ -363,11 +505,10 @@ export function Dashboard() {
       const completedPoints = completedTasks.reduce((sum, t) => sum + (t.points || 0), 0);
       const pendingPoints = pendingTasks.reduce((sum, t) => sum + (t.points || 0), 0);
 
-      // メンバー別集計
-      const stats: MemberStats[] = (members || []).map(member => {
+      // メンバー別集計（月間）
+      const stats: MemberStats[] = (membersData || []).map(member => {
         const memberTasks = tasks?.filter(t => t.member_id === member.id) || [];
         const memberCompleted = memberTasks.filter(t => t.status === 'completed');
-        const memberPending = memberTasks.filter(t => t.status === 'pending');
 
         return {
           member,
@@ -380,6 +521,21 @@ export function Dashboard() {
         };
       });
 
+      // メンバー別集計（年間）
+      const yearlyStats: MemberStats[] = (membersData || []).map(member => {
+        const memberTasks = yearlyTasks?.filter(t => t.member_id === member.id) || [];
+
+        return {
+          member,
+          totalAmount: memberTasks.reduce((sum, t) => sum + (t.amount || 0), 0),
+          completedAmount: memberTasks.reduce((sum, t) => sum + (t.amount || 0), 0),
+          totalPoints: memberTasks.reduce((sum, t) => sum + (t.points || 0), 0),
+          completedPoints: memberTasks.reduce((sum, t) => sum + (t.points || 0), 0),
+          taskCount: memberTasks.length,
+          completedTaskCount: memberTasks.length,
+        };
+      });
+
       setSummary({
         completedAmount,
         pendingAmount,
@@ -388,8 +544,11 @@ export function Dashboard() {
         targetAmount: goals?.target_amount || 10000000,
         targetPoints: goals?.target_points || 1000,
         recentActivities: recentTasks || [],
+        monthlyCompletedCount: completedTasks.length,
       });
       setMemberStats(stats);
+      setYearlyMemberStats(yearlyStats);
+      setMembers(membersData || []);
       setAllTasks(allTasksData || []);
     } catch (err) {
       console.error('Dashboard fetch error:', err);
@@ -403,6 +562,28 @@ export function Dashboard() {
     fetchDashboardData();
   }, []);
 
+  // 個人フィルタ適用時のサマリーとアクティビティ
+  const filteredSummary = useMemo(() => {
+    if (!summary || !selectedMemberId || viewMode !== 'personal') return summary;
+
+    const memberStat = memberStats.find(s => s.member.id === selectedMemberId);
+    if (!memberStat) return summary;
+
+    const filteredActivities = summary.recentActivities.filter(
+      t => t.member_id === selectedMemberId
+    );
+
+    return {
+      ...summary,
+      completedAmount: memberStat.completedAmount,
+      pendingAmount: memberStat.totalAmount - memberStat.completedAmount,
+      completedPoints: memberStat.completedPoints,
+      pendingPoints: memberStat.totalPoints - memberStat.completedPoints,
+      recentActivities: filteredActivities,
+      monthlyCompletedCount: memberStat.completedTaskCount,
+    };
+  }, [summary, selectedMemberId, viewMode, memberStats]);
+
   if (loading) {
     return <DashboardSkeleton />;
   }
@@ -411,25 +592,40 @@ export function Dashboard() {
     return <ErrorDisplay message={error} onRetry={fetchDashboardData} />;
   }
 
-  if (!summary) {
+  if (!summary || !filteredSummary) {
     return null;
   }
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* ビュー切り替え & CSV出力 */}
-      <div className="flex items-center justify-between">
-        <ViewToggle viewMode={viewMode} onToggle={setViewMode} />
+      {/* ビュー切り替え & 個人フィルタ & CSV出力 */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <ViewToggle viewMode={viewMode} onToggle={setViewMode} />
+          {viewMode === 'personal' && (
+            <MemberSelector
+              members={members}
+              selectedMemberId={selectedMemberId}
+              onSelect={setSelectedMemberId}
+            />
+          )}
+        </div>
         <CSVExportButton tasks={allTasks} />
       </div>
+
+      {/* 月間完了集計 (v1.2) */}
+      <MonthlyCompletionCard
+        count={filteredSummary.monthlyCompletedCount}
+        totalAmount={filteredSummary.completedAmount}
+      />
 
       {/* 売上メーター */}
       <Meter
         label="売上"
         icon={TrendingUp}
-        completed={summary.completedAmount}
-        pending={summary.pendingAmount}
-        target={summary.targetAmount}
+        completed={filteredSummary.completedAmount}
+        pending={filteredSummary.pendingAmount}
+        target={filteredSummary.targetAmount}
         formatValue={formatCurrency}
         color="primary"
       />
@@ -438,9 +634,9 @@ export function Dashboard() {
       <Meter
         label="ポイント"
         icon={Zap}
-        completed={summary.completedPoints}
-        pending={summary.pendingPoints}
-        target={summary.targetPoints}
+        completed={filteredSummary.completedPoints}
+        pending={filteredSummary.pendingPoints}
+        target={filteredSummary.targetPoints}
         formatValue={(n) => `${formatNumber(n)}pt`}
         color="secondary"
       />
@@ -448,13 +644,25 @@ export function Dashboard() {
       {/* メンバー別ランキング（全体ビューのみ） */}
       {viewMode === 'team' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <MemberRanking stats={memberStats} type="amount" />
-          <MemberRanking stats={memberStats} type="points" />
+          <MemberRanking 
+            stats={memberStats} 
+            yearlyStats={yearlyMemberStats}
+            type="amount" 
+            period={rankingPeriod}
+            onPeriodChange={setRankingPeriod}
+          />
+          <MemberRanking 
+            stats={memberStats} 
+            yearlyStats={yearlyMemberStats}
+            type="points" 
+            period={rankingPeriod}
+            onPeriodChange={setRankingPeriod}
+          />
         </div>
       )}
 
       {/* 最近のアクティビティ */}
-      <RecentActivity tasks={summary.recentActivities} />
+      <RecentActivity tasks={filteredSummary.recentActivities} />
     </div>
   );
 }

@@ -1,347 +1,169 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { X, Loader2, Calendar, User, FileText, Coins, Zap, Save, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { X, Trash2, Save, Loader2, Calendar, DollarSign, Zap, RefreshCcw } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { formatDate } from '@/lib/utils';
-import type { Member, Task, TaskFormData } from '@/lib/types';
+import type { Member, CalendarTask } from '@/lib/types';
 import { toast } from 'sonner';
 
-interface TaskEditModalProps {
-  task: Task;
-  isOpen: boolean;
+export function TaskEditModal({ 
+  task, 
+  members, 
+  onClose, 
+  onUpdate 
+}: { 
+  task: CalendarTask; 
+  members: Member[]; 
   onClose: () => void;
-  onUpdated: (task: Task) => void;
-  onDeleted: (taskId: string) => void;
-}
-
-export function TaskEditModal({ task, isOpen, onClose, onUpdated, onDeleted }: TaskEditModalProps) {
-  const [members, setMembers] = useState<Member[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [formData, setFormData] = useState<TaskFormData>({
+  onUpdate: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
     title: task.title,
     amount: task.amount,
     points: task.points,
     member_id: task.member_id,
-    start_date: task.start_date || task.scheduled_date || formatDate(new Date()),
-    end_date: task.end_date || task.scheduled_date || formatDate(new Date()),
+    start_date: task.start_date,
+    end_date: task.end_date,
+    status: task.status
   });
 
-  useEffect(() => {
-    if (isOpen) {
-      setFormData({
-        title: task.title,
-        amount: task.amount,
-        points: task.points,
-        member_id: task.member_id,
-        start_date: task.start_date || task.scheduled_date || formatDate(new Date()),
-        end_date: task.end_date || task.scheduled_date || formatDate(new Date()),
-      });
-      fetchMembers();
-    }
-  }, [isOpen, task]);
-
-  const fetchMembers = async () => {
+  const handleUpdate = async () => {
+    setLoading(true);
     try {
       const supabase = createClient();
-      const { data, error } = await supabase
-        .from('members')
-        .select('*')
-        .order('created_at');
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          ...formData,
+          completed_at: formData.status === 'completed' ? (task.completed_at || new Date().toISOString()) : null
+        })
+        .eq('id', task.id);
 
       if (error) throw error;
-      setMembers(data || []);
+      toast.success('更新しました');
+      onUpdate();
+      onClose();
     } catch (err) {
-      console.error('Fetch members error:', err);
-      toast.error('メンバーの取得に失敗しました');
+      toast.error('更新に失敗しました');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.title.trim()) {
-      toast.error('案件名を入力してください');
-      return;
-    }
-
-    if (!formData.member_id) {
-      toast.error('担当者を選択してください');
-      return;
-    }
-
-    if (formData.start_date > formData.end_date) {
-      toast.error('開始日は終了日より前にしてください');
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      const supabase = createClient();
-      
-      const { data, error } = await supabase
-        .from('tasks')
-        .update({
-          title: formData.title.trim(),
-          amount: formData.amount,
-          points: formData.points,
-          member_id: formData.member_id,
-          start_date: formData.start_date,
-          end_date: formData.end_date,
-          scheduled_date: formData.start_date, // 後方互換性
-        })
-        .eq('id', task.id)
-        .select('*, member:members(*)')
-        .single();
-
-      if (error) throw error;
-
-      toast.success('タスクを更新しました');
-      onUpdated(data as Task);
-      onClose();
-    } catch (err) {
-      console.error('Update error:', err);
-      toast.error('更新に失敗しました');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleDelete = async () => {
-    if (!confirm('このタスクを削除しますか？')) return;
-
-    setDeleting(true);
-
+    if (!confirm('本当に削除しますか？')) return;
+    setLoading(true);
     try {
       const supabase = createClient();
-      
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('id', task.id);
-
-      if (error) throw error;
-
-      toast.success('タスクを削除しました');
-      onDeleted(task.id);
+      await supabase.from('tasks').delete().eq('id', task.id);
+      toast.success('削除しました');
+      onUpdate();
       onClose();
     } catch (err) {
-      console.error('Delete error:', err);
       toast.error('削除に失敗しました');
     } finally {
-      setDeleting(false);
+      setLoading(false);
     }
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value, type } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'number' ? parseInt(value) || 0 : value,
-    }));
-  };
-
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      
-      {/* Modal */}
-      <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto bg-dark-800 rounded-2xl shadow-xl animate-fade-in">
-        {/* Header */}
-        <div className="sticky top-0 bg-dark-800 p-4 border-b border-dark-700 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-dark-100">タスク編集</h2>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-dark-700 transition-colors"
-          >
-            <X className="w-5 h-5 text-dark-400" />
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="card w-full max-w-lg p-6 space-y-6 animate-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between border-b border-dark-700 pb-4">
+          <h2 className="text-xl font-bold">タスク編集</h2>
+          <button onClick={onClose} className="text-dark-500 hover:text-white"><X className="w-6 h-6" /></button>
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center p-12">
-            <Loader2 className="w-8 h-8 text-accent-primary animate-spin" />
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-[10px] uppercase font-black text-dark-500 tracking-widest ml-1">案件名</label>
+            <input 
+              className="input-premium" 
+              value={formData.title} 
+              onChange={e => setFormData({...formData, title: e.target.value})}
+            />
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="p-4 space-y-4">
-            {/* 案件名 */}
-            <div>
-              <label className="label flex items-center gap-2">
-                <FileText className="w-4 h-4 text-accent-primary" />
-                案件名
-              </label>
-              <input
-                type="text"
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                placeholder="例：○○社 コンサルティング"
-                className="input"
-                required
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase font-black text-dark-500 tracking-widest ml-1">売上</label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-500" />
+                <input 
+                  type="number" 
+                  className="input-premium pl-9" 
+                  value={formData.amount} 
+                  onChange={e => setFormData({...formData, amount: Number(e.target.value)})}
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase font-black text-dark-500 tracking-widest ml-1">ポイント</label>
+              <div className="relative">
+                <Zap className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-500" />
+                <input 
+                  type="number" 
+                  className="input-premium pl-9" 
+                  value={formData.points} 
+                  onChange={e => setFormData({...formData, points: Number(e.target.value)})}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase font-black text-dark-500 tracking-widest ml-1">開始日</label>
+              <input 
+                type="date" 
+                className="input-premium" 
+                value={formData.start_date} 
+                onChange={e => setFormData({...formData, start_date: e.target.value})}
               />
             </div>
-
-            {/* 金額・ポイント */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="label flex items-center gap-2">
-                  <Coins className="w-4 h-4 text-accent-success" />
-                  金額（円）
-                </label>
-                <input
-                  type="number"
-                  name="amount"
-                  value={formData.amount || ''}
-                  onChange={handleChange}
-                  placeholder="0"
-                  className="input"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  min="0"
-                />
-              </div>
-
-              <div>
-                <label className="label flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-accent-secondary" />
-                  ポイント
-                </label>
-                <input
-                  type="number"
-                  name="points"
-                  value={formData.points || ''}
-                  onChange={handleChange}
-                  placeholder="0"
-                  className="input"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  min="0"
-                />
-              </div>
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase font-black text-dark-500 tracking-widest ml-1">終了日</label>
+              <input 
+                type="date" 
+                className="input-premium" 
+                value={formData.end_date} 
+                onChange={e => setFormData({...formData, end_date: e.target.value})}
+              />
             </div>
+          </div>
 
-            {/* 担当者 */}
-            <div>
-              <label className="label flex items-center gap-2">
-                <User className="w-4 h-4 text-accent-primary" />
-                担当者
-              </label>
-              <div className="grid grid-cols-4 gap-2">
-                {members.map(member => (
-                  <button
-                    key={member.id}
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, member_id: member.id }))}
-                    className={`p-2 rounded-xl border-2 transition-all duration-200 ${
-                      formData.member_id === member.id
-                        ? 'border-accent-primary bg-accent-primary/20'
-                        : 'border-dark-600 hover:border-dark-500'
-                    }`}
-                  >
-                    <div 
-                      className="w-6 h-6 rounded-full mx-auto mb-1"
-                      style={{ backgroundColor: member.color }}
-                    />
-                    <p className="text-xs text-dark-300 truncate">{member.name}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 開始日・終了日 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="label flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-accent-primary" />
-                  開始日
-                </label>
-                <input
-                  type="date"
-                  name="start_date"
-                  value={formData.start_date}
-                  onChange={handleChange}
-                  className="input"
-                  required
-                />
-              </div>
-              <div>
-                <label className="label flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-accent-warning" />
-                  終了日
-                </label>
-                <input
-                  type="date"
-                  name="end_date"
-                  value={formData.end_date}
-                  onChange={handleChange}
-                  className="input"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* ステータス表示 */}
-            <div className="p-3 rounded-lg bg-dark-700/50">
-              <p className="text-sm text-dark-400">
-                ステータス: 
-                <span className={`ml-2 font-medium ${
-                  task.status === 'completed' ? 'text-accent-success' :
-                  task.status === 'cancelled' ? 'text-accent-danger' :
-                  'text-accent-warning'
-                }`}>
-                  {task.status === 'completed' ? '完了' :
-                   task.status === 'cancelled' ? 'キャンセル' : '進行中'}
-                </span>
-              </p>
-            </div>
-
-            {/* ボタン */}
-            <div className="flex gap-3 pt-2">
+          <div className="flex gap-2 p-1 bg-dark-800 rounded-xl border border-dark-700">
+            {(['pending', 'completed', 'cancelled'] as const).map(s => (
               <button
-                type="button"
-                onClick={handleDelete}
-                disabled={deleting || submitting}
-                className="flex-1 btn-secondary flex items-center justify-center gap-2 !bg-accent-danger/20 !border-accent-danger/50 hover:!bg-accent-danger/30"
+                key={s}
+                onClick={() => setFormData({...formData, status: s})}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                  formData.status === s ? 'bg-accent-primary text-white shadow-glow-sm' : 'text-dark-500 hover:text-dark-200'
+                }`}
               >
-                {deleting ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <Trash2 className="w-5 h-5" />
-                    削除
-                  </>
-                )}
+                {s === 'pending' ? '進行中' : s === 'completed' ? '完了' : '中止'}
               </button>
-              <button
-                type="submit"
-                disabled={submitting || deleting}
-                className="flex-1 btn-primary flex items-center justify-center gap-2"
-              >
-                {submitting ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <Save className="w-5 h-5" />
-                    保存
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-        )}
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 pt-4 border-t border-dark-700">
+          <button 
+            disabled={loading}
+            onClick={handleDelete}
+            className="p-3 rounded-xl bg-accent-danger/10 text-accent-danger hover:bg-accent-danger/20 transition-colors"
+          >
+            <Trash2 className="w-6 h-6" />
+          </button>
+          <button 
+            disabled={loading}
+            onClick={handleUpdate}
+            className="flex-1 btn-primary h-12 flex items-center justify-center gap-2"
+          >
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5" /> 更新を保存</>}
+          </button>
+        </div>
       </div>
     </div>
   );
