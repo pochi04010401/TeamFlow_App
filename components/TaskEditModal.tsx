@@ -46,6 +46,7 @@ export function TaskEditModal({
         .from('tasks')
         .update({
           ...formData,
+          scheduled_date: formData.start_date, // v1.8.3: Sync scheduled_date with start_date
           completed_at: formData.status === 'completed' ? (task.completed_at || new Date().toISOString()) : null
         })
         .eq('id', task.id);

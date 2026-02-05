@@ -45,6 +45,7 @@ export function TaskForm({ members }: { members: Member[] }) {
           member_id: formData.member_id,
           start_date: formData.start_date,
           end_date: formData.end_date,
+          scheduled_date: formData.start_date, // v1.8.3: Add scheduled_date for DB compatibility
           notes: formData.notes,
           status: 'pending'
         }]);
