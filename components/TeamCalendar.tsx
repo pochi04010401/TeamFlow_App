@@ -164,27 +164,33 @@ export function TeamCalendar() {
                                 <div 
                                   key={task.id}
                                   onClick={() => setEditingTask(task)}
-                                  className={`task-bar ${task.status === 'completed' ? 'opacity-30' : 'shadow-glow-sm animate-pulse-slow'}`}
+                                  className={`task-bar relative ${task.status === 'completed' ? 'opacity-30' : 'shadow-glow-sm'}`}
                                   style={{ 
                                     backgroundColor: member.color,
                                     color: getContrastColor(member.color),
                                     borderRadius: `${isStart ? '8px' : '0'} ${isEnd ? '8px' : '0'} ${isEnd ? '8px' : '0'} ${isStart ? '8px' : '0'}`,
-                                    marginTop: '2px',
-                                    marginBottom: '2px'
+                                    marginTop: '1px',
+                                    marginBottom: '1px',
+                                    borderLeft: isStart ? 'none' : `1px solid rgba(0,0,0,0.1)`,
+                                    borderRight: isEnd ? 'none' : `1px solid rgba(0,0,0,0.1)`,
                                   }}
                                 >
-                                  <div className="flex items-center justify-between px-2 py-1.5 min-h-[36px]">
-                                    {isStart && (
+                                  <div className="flex items-center justify-between px-2 py-1 min-h-[32px]">
+                                    {isStart ? (
                                       <span className="text-[10px] font-bold truncate leading-tight flex-1">
                                         {task.title}
                                       </span>
+                                    ) : (
+                                      <div className="flex-1 h-1" /> /* 継続中の隙間埋め */
                                     )}
-                                    <button 
-                                      onClick={(e) => handleToggleComplete(e, task)}
-                                      className="w-5 h-5 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center transition-colors flex-shrink-0 ml-1"
-                                    >
-                                      {task.status === 'completed' ? <Check className="w-3 h-3" /> : <div className="w-2 h-2 rounded-full bg-white/60" />}
-                                    </button>
+                                    {isEnd && (
+                                      <button 
+                                        onClick={(e) => handleToggleComplete(e, task)}
+                                        className="w-4 h-4 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center transition-colors flex-shrink-0 ml-1"
+                                      >
+                                        {task.status === 'completed' ? <Check className="w-2.5 h-2.5" /> : <div className="w-1.5 h-1.5 rounded-full bg-white/60" />}
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
                               );

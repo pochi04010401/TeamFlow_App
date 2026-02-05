@@ -154,7 +154,7 @@ function Meter({
           }`} />
         </div>
         <div>
-          <h3 className="font-medium text-dark-200">{label}</h3>
+          <h3 className="font-medium text-dark-200">{label} {label === '売上' && '(千円)'}</h3>
           <p className="text-sm text-dark-400">目標: {formatValue(target)}</p>
         </div>
       </div>
@@ -214,7 +214,7 @@ function MonthlyCompletionCard({
         </div>
         <div className="text-center p-3 rounded-lg bg-dark-700/30">
           <p className="text-lg font-bold text-accent-success">{formatCurrency(totalAmount)}</p>
-          <p className="text-xs text-dark-400">完了金額</p>
+          <p className="text-xs text-dark-400">完了金額 (千円)</p>
         </div>
       </div>
     </div>
@@ -664,9 +664,9 @@ export function Dashboard() {
       {/* 最近のアクティビティ */}
       <RecentActivity tasks={filteredSummary.recentActivities} />
 
-      {/* バージョン表示 (v1.3) */}
+      {/* バージョン表示 (v1.4) */}
       <div className="flex justify-center pt-4 pb-8 opacity-20">
-        <span className="text-[10px] font-mono text-dark-500">TeamFlow v1.3</span>
+        <span className="text-[10px] font-mono text-dark-500">TeamFlow v1.4</span>
       </div>
     </div>
   );

@@ -91,7 +91,7 @@ export function TaskForm({ members }: { members: Member[] }) {
           <div className="grid grid-cols-2 gap-4">
             {/* 売上金額 */}
             <div className="space-y-2">
-              <label className="text-xs font-black uppercase text-dark-500 tracking-widest ml-1">売上予定 (円)</label>
+              <label className="text-xs font-black uppercase text-dark-500 tracking-widest ml-1">売上予定 (千円)</label>
               <div className="relative group">
                 <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 group-focus-within:text-accent-success transition-colors" />
                 <input
@@ -100,7 +100,7 @@ export function TaskForm({ members }: { members: Member[] }) {
                   required
                   value={formData.amount === 0 ? '' : formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
-                  placeholder="50000"
+                  placeholder="50"
                   className="input-premium pl-12"
                 />
               </div>

@@ -27,13 +27,10 @@ export function getCurrentMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
-// 金額をフォーマット（カンマ区切り）
+// 金額をフォーマット（千円単位 v1.4）
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('ja-JP', {
-    style: 'currency',
-    currency: 'JPY',
-    maximumFractionDigits: 0,
-  }).format(amount);
+  const kAmount = Math.floor(amount / 1000);
+  return new Intl.NumberFormat('ja-JP').format(kAmount) + '千円';
 }
 
 // 数値をフォーマット（カンマ区切り）
