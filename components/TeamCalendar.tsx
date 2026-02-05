@@ -11,6 +11,7 @@ import {
   fireConfetti,
   isBetween
 } from '@/lib/utils';
+import { getHolidayName } from '@/lib/holidays';
 import type { Member, CalendarTask } from '@/lib/types';
 import { ErrorDisplay } from './ErrorBoundary';
 import { toast } from 'sonner';
@@ -180,7 +181,7 @@ export function TeamCalendar() {
   if (error) return <ErrorDisplay message={error} onRetry={fetchData} />;
 
   return (
-    <div className="space-y-4 animate-fade-in pb-40">
+    <div className="space-y-4 animate-fade-in pb-20">
       <div className="flex items-center justify-between px-2 gap-4 flex-wrap">
         <MemberFilter 
           members={members}
@@ -201,12 +202,12 @@ export function TeamCalendar() {
 
       <div className="card overflow-hidden shadow-2xl border-dark-700 max-h-[80vh] flex flex-col">
         <div className="overflow-auto flex-1" ref={scrollRef}>
-          <table className="w-full border-collapse table-fixed">
+          <table className="w-full border-collapse table-fixed min-w-[max-content]">
             <thead>
               <tr className="bg-dark-900/95 sticky top-0 z-40 backdrop-blur-md">
                 <th className="p-3 text-left text-[10px] uppercase text-dark-500 font-black tracking-widest border-r border-dark-700/30 sticky left-0 bg-dark-900 z-50 w-16">日付</th>
                 {visibleMembers.map(m => (
-                  <th key={m.id} className="p-3 text-center min-w-[120px]">
+                  <th key={m.id} className="p-3 text-center min-w-[160px] max-w-[200px]">
                     <div className="flex flex-col items-center gap-1">
                       <div className="w-2 h-2 rounded-full shadow-glow-sm" style={{ backgroundColor: m.color }} />
                       <span className="text-[11px] font-bold text-dark-200">{m.name}</span>
@@ -219,13 +220,28 @@ export function TeamCalendar() {
               {dates.map((date, index) => {
                 const dateStr = formatDate(date);
                 const isTodayDate = isToday(date);
+                const holiday = getHolidayName(date);
+                const dayOfWeek = date.getDay(); // 0:日, 6:土
+                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
                 const isLast = index === dates.length - 1;
                 
+                // 行の背景色決定 (v1.11: 祝日・週末対応)
+                const rowBg = isTodayDate ? 'bg-accent-primary/10' : 
+                             holiday ? 'bg-accent-danger/10' :
+                             dayOfWeek === 0 ? 'bg-accent-danger/5' :
+                             dayOfWeek === 6 ? 'bg-accent-secondary/5' : '';
+
+                const dateColor = isTodayDate ? 'text-accent-primary' :
+                                 holiday || dayOfWeek === 0 ? 'text-accent-danger' :
+                                 dayOfWeek === 6 ? 'text-accent-secondary' : 'text-dark-300';
+
                 return (
-                  <tr key={dateStr} className={`border-t border-dark-700/20 ${isTodayDate ? 'bg-accent-primary/5' : ''} ${isLast ? 'pb-20' : ''}`}>
+                  <tr key={dateStr} className={`border-t border-dark-700/20 ${rowBg} ${isLast ? 'pb-24' : ''}`}>
                     <td className={`p-3 text-center border-r border-dark-700/30 sticky left-0 z-10 bg-dark-800/95 backdrop-blur-sm ${isLast ? 'rounded-bl-xl' : ''}`}>
-                      <span className={`block text-lg font-black leading-none ${isTodayDate ? 'text-accent-primary' : 'text-dark-300'}`}>{date.getDate()}</span>
-                      <span className="text-[10px] text-dark-500 font-bold">{getDayOfWeek(date)}</span>
+                      <span className={`block text-lg font-black leading-none ${dateColor}`}>{date.getDate()}</span>
+                      <span className={`text-[10px] font-bold ${holiday ? 'text-accent-danger' : 'text-dark-500'}`}>
+                        {holiday || getDayOfWeek(date)}
+                      </span>
                     </td>
                     {visibleMembers.map(member => {
                       const memberTasks = filteredTasks.filter(t => 
@@ -275,8 +291,7 @@ export function TeamCalendar() {
                                 </div>
                               );
                             })}
-                            {/* v1.8: 余白調整 */}
-                            {isLast && <div className="h-10" />}
+                            {isLast && <div className="h-16" />}
                           </div>
                         </td>
                       );
