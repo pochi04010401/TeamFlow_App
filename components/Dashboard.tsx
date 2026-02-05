@@ -452,6 +452,7 @@ export function Dashboard() {
       const { data: tasks, error: tasksError } = await supabase
         .from('tasks')
         .select('*, member:members(*)')
+        .in('status', ['pending', 'completed']) // v1.12: Filter out cancelled/others
         .or(`start_date.gte.${startOfMonth},scheduled_date.gte.${startOfMonth}`)
         .or(`end_date.lte.${endOfMonth},scheduled_date.lte.${endOfMonth}`);
 
@@ -664,9 +665,9 @@ export function Dashboard() {
       {/* 最近のアクティビティ */}
       <RecentActivity tasks={filteredSummary.recentActivities} />
 
-      {/* バージョン表示 (v1.11) */}
+      {/* バージョン表示 (v1.12) */}
       <div className="flex justify-center pt-4 pb-8 opacity-20">
-        <span className="text-[10px] font-mono text-dark-500">TeamFlow v1.11</span>
+        <span className="text-[10px] font-mono text-dark-500">TeamFlow v1.12</span>
       </div>
     </div>
   );
