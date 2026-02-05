@@ -165,6 +165,12 @@ export function TeamCalendar() {
     return tasks.filter(t => t.member_id === selectedMemberId);
   }, [tasks, selectedMemberId]);
 
+  // v1.8: フィルタされたメンバーだけを表示
+  const visibleMembers = useMemo(() => {
+    if (!selectedMemberId) return members;
+    return members.filter(m => m.id === selectedMemberId);
+  }, [members, selectedMemberId]);
+
   const dates = Array.from(
     { length: new Date(currentMonth.year, currentMonth.month, 0).getDate() },
     (_, i) => new Date(currentMonth.year, currentMonth.month - 1, i + 1)
@@ -199,7 +205,7 @@ export function TeamCalendar() {
             <thead>
               <tr className="bg-dark-900/95 sticky top-0 z-40 backdrop-blur-md">
                 <th className="p-3 text-left text-[10px] uppercase text-dark-500 font-black tracking-widest border-r border-dark-700/30 sticky left-0 bg-dark-900 z-50 w-16">日付</th>
-                {members.map(m => (
+                {visibleMembers.map(m => (
                   <th key={m.id} className="p-3 text-center min-w-[120px]">
                     <div className="flex flex-col items-center gap-1">
                       <div className="w-2 h-2 rounded-full shadow-glow-sm" style={{ backgroundColor: m.color }} />
@@ -210,17 +216,18 @@ export function TeamCalendar() {
               </tr>
             </thead>
             <tbody>
-              {dates.map(date => {
+              {dates.map((date, index) => {
                 const dateStr = formatDate(date);
                 const isTodayDate = isToday(date);
+                const isLast = index === dates.length - 1;
                 
                 return (
-                  <tr key={dateStr} className={`border-t border-dark-700/20 ${isTodayDate ? 'bg-accent-primary/5' : ''}`}>
-                    <td className={`p-3 text-center border-r border-dark-700/30 sticky left-0 z-10 bg-dark-800/95 backdrop-blur-sm`}>
+                  <tr key={dateStr} className={`border-t border-dark-700/20 ${isTodayDate ? 'bg-accent-primary/5' : ''} ${isLast ? 'pb-20' : ''}`}>
+                    <td className={`p-3 text-center border-r border-dark-700/30 sticky left-0 z-10 bg-dark-800/95 backdrop-blur-sm ${isLast ? 'rounded-bl-xl' : ''}`}>
                       <span className={`block text-lg font-black leading-none ${isTodayDate ? 'text-accent-primary' : 'text-dark-300'}`}>{date.getDate()}</span>
                       <span className="text-[10px] text-dark-500 font-bold">{getDayOfWeek(date)}</span>
                     </td>
-                    {members.map(member => {
+                    {visibleMembers.map(member => {
                       const memberTasks = filteredTasks.filter(t => 
                         t.member_id === member.id && 
                         isBetween(dateStr, t.start_date, t.end_date)
@@ -268,6 +275,8 @@ export function TeamCalendar() {
                                 </div>
                               );
                             })}
+                            {/* v1.8: 余白調整 */}
+                            {isLast && <div className="h-10" />}
                           </div>
                         </td>
                       );
