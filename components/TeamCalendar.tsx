@@ -180,7 +180,7 @@ export function TeamCalendar() {
   if (error) return <ErrorDisplay message={error} onRetry={fetchData} />;
 
   return (
-    <div className="space-y-4 animate-fade-in pb-20">
+    <div className="space-y-4 animate-fade-in pb-32">
       <div className="flex items-center justify-between px-2 gap-4 flex-wrap">
         <MemberFilter 
           members={members}

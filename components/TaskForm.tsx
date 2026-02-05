@@ -11,9 +11,10 @@ import { toast } from 'sonner';
 export function TaskForm({ members }: { members: Member[] }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<TaskFormData>({
+  const [formData, setFormData] = useState<TaskFormData & { amountStr: string }>({
     title: '',
     amount: 0,
+    amountStr: '',
     points: 0,
     member_id: members[0]?.id || '',
     start_date: getCurrentDate(),
@@ -39,7 +40,7 @@ export function TaskForm({ members }: { members: Member[] }) {
         .from('tasks')
         .insert([{
           title: formData.title,
-          amount: formData.amount,
+          amount: formData.amountStr === '' ? 0 : Number(formData.amountStr),
           points: formData.points,
           member_id: formData.member_id,
           start_date: formData.start_date,
@@ -58,7 +59,7 @@ export function TaskForm({ members }: { members: Member[] }) {
       setFormData({
         ...formData,
         title: '',
-        amount: 0,
+        amountStr: '',
         points: 0,
         notes: ''
       });
@@ -107,9 +108,8 @@ export function TaskForm({ members }: { members: Member[] }) {
                 <input
                   type="number"
                   inputMode="numeric"
-                  required
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
+                  value={formData.amountStr}
+                  onChange={(e) => setFormData({ ...formData, amountStr: e.target.value })}
                   placeholder="50"
                   className="input-premium pl-12"
                 />
