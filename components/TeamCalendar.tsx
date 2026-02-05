@@ -101,13 +101,7 @@ export function TeamCalendar() {
 
   return (
     <div className="space-y-4 animate-fade-in pb-20">
-      <div className="flex items-center justify-between px-2">
-        <div className="flex items-center gap-2">
-          <button onClick={() => setHideCompleted(!hideCompleted)} className="btn-icon">
-            {hideCompleted ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            <span className="text-[10px] ml-1">{hideCompleted ? '完了を表示' : '完了を隠す'}</span>
-          </button>
-        </div>
+      <div className="flex items-center justify-end px-2">
         <div className="flex items-center gap-4">
           <button onClick={() => setCurrentMonth(prev => prev.month === 1 ? {year: prev.year-1, month: 12} : {...prev, month: prev.month-1})} className="p-1">
             <ChevronLeft className="w-5 h-5" />

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PlusCircle, Calendar, DollarSign, Zap, User, Loader2 } from 'lucide-react';
+import { PlusCircle, Calendar, DollarSign, Zap, User, Loader2, ChevronDown } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getCurrentDate } from '@/lib/utils';
 import type { Member, TaskFormData } from '@/lib/types';
@@ -27,6 +27,13 @@ export function TaskForm({ members }: { members: Member[] }) {
     try {
       const supabase = createClient();
       
+      // バリデーション (v1.6)
+      if (formData.end_date < formData.start_date) {
+        toast.error('終了日は開始日以降の日付にしてください');
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase
         .from('tasks')
         .insert([{
@@ -111,15 +118,21 @@ export function TaskForm({ members }: { members: Member[] }) {
               <label className="text-xs font-black uppercase text-dark-500 tracking-widest ml-1">ポイント</label>
               <div className="relative group">
                 <Zap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 group-focus-within:text-accent-secondary transition-colors" />
-                <input
-                  type="number"
-                  inputMode="numeric"
+                <select
                   required
-                  value={formData.points === 0 ? '' : formData.points}
+                  value={formData.points}
                   onChange={(e) => setFormData({ ...formData, points: Number(e.target.value) })}
-                  placeholder="100"
-                  className="input-premium pl-12"
-                />
+                  className="input-premium pl-12 appearance-none"
+                >
+                  {[0, 10, 20, 30, 40, 50].map((pt) => (
+                    <option key={pt} value={pt}>
+                      {pt} pt
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <ChevronDown className="w-4 h-4 text-dark-500" />
+                </div>
               </div>
             </div>
           </div>
