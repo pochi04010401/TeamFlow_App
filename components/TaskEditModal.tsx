@@ -99,17 +99,18 @@ export function TaskEditModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
             {/* 売上 */}
             <div className="space-y-1">
-              <label className="text-[10px] uppercase font-black text-dark-500 tracking-widest ml-1">売上 (千円)</label>
-              <div className="relative">
+              <label className="text-[10px] uppercase font-black text-dark-500 tracking-widest ml-1">売上</label>
+              <div className="relative flex items-center gap-2">
                 <input 
                   type="number" 
-                  className="input-premium px-4" 
+                  className="input-premium px-4 flex-1" 
                   value={formData.amount} 
                   onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
                 />
+                <span className="text-sm font-bold text-dark-400 flex-shrink-0 bg-dark-700/50 px-3 py-2.5 rounded-xl border border-dark-600">千円</span>
               </div>
             </div>
             {/* ポイント */}

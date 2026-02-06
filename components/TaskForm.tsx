@@ -114,20 +114,22 @@ export function TaskForm({ members }: { members: Member[] }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-6">
             {/* 売上金額 */}
             <div className="space-y-2">
               <label className="text-xs font-black uppercase text-dark-500 tracking-widest ml-1">売上予定</label>
-              <div className="relative flex items-center gap-2">
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={formData.amountStr}
-                  onChange={(e) => setFormData({ ...formData, amountStr: e.target.value })}
-                  placeholder="0"
-                  className="input-premium px-4 flex-1"
-                />
-                <span className="text-sm font-bold text-dark-400 flex-shrink-0">千円</span>
+              <div className="relative flex items-center gap-3">
+                <div className="flex-1">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={formData.amountStr}
+                    onChange={(e) => setFormData({ ...formData, amountStr: e.target.value })}
+                    placeholder="0"
+                    className="input-premium px-4 w-full"
+                  />
+                </div>
+                <span className="text-sm font-bold text-dark-400 flex-shrink-0 bg-dark-700/50 px-3 py-3 rounded-xl border border-dark-600">千円</span>
               </div>
             </div>
 
@@ -149,7 +151,7 @@ export function TaskForm({ members }: { members: Member[] }) {
                   ))}
                 </select>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <ChevronDown className="w-4 h-4 text-dark-500" />
+                  <ChevronDown className="w-4 h-4 text-dark-400" />
                 </div>
               </div>
             </div>
