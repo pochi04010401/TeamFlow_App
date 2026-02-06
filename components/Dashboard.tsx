@@ -665,9 +665,9 @@ export function Dashboard() {
       {/* 最近のアクティビティ */}
       <RecentActivity tasks={filteredSummary.recentActivities} />
 
-      {/* バージョン表示 (v1.14) */}
+      {/* バージョン表示 (v1.15) */}
       <div className="flex justify-center pt-4 pb-8 opacity-20">
-        <span className="text-[10px] font-mono text-dark-500">TeamFlow v1.14</span>
+        <span className="text-[10px] font-mono text-dark-500">TeamFlow v1.15</span>
       </div>
     </div>
   );

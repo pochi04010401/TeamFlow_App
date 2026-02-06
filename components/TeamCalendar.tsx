@@ -17,9 +17,9 @@ import { ErrorDisplay } from './ErrorBoundary';
 import { toast } from 'sonner';
 import { TaskEditModal } from './TaskEditModal';
 
-const ROW_HEIGHT = 64; // 1日の高さ
+const ROW_HEIGHT = 72; // v1.15: 1日の高さを少し拡大
 
-// メンバー選択ドロップダウン (v1.7)
+// メンバー選択ドロップダウン
 function MemberFilter({
   members,
   selectedMemberId,
@@ -117,9 +117,7 @@ export function TeamCalendar() {
     setLoading(true);
     try {
       const supabase = createClient();
-      
       const { data: membersData } = await supabase.from('members').select('*').order('name');
-      
       const startOfMonth = `${currentMonth.year}-${String(currentMonth.month).padStart(2, '0')}-01`;
       const endOfMonth = new Date(currentMonth.year, currentMonth.month, 0).toISOString().split('T')[0];
 
@@ -144,17 +142,13 @@ export function TeamCalendar() {
 
   const handleToggleComplete = async (e: React.MouseEvent, task: CalendarTask) => {
     e.stopPropagation();
-    
     const supabase = createClient();
-    
     try {
       const { error } = await supabase
         .from('tasks')
         .update({ status: 'completed', completed_at: new Date().toISOString() })
         .eq('id', task.id);
-
       if (error) throw error;
-
       setTasks(prev => prev.filter(t => t.id !== task.id));
       await fireConfetti();
       toast.success('タスクを完了しました！');
@@ -174,6 +168,41 @@ export function TeamCalendar() {
     if (!selectedMemberId) return members;
     return members.filter(m => m.id === selectedMemberId);
   }, [members, selectedMemberId]);
+
+  // 重なりを計算する関数 (v1.15)
+  const getTaskLayout = (memberTasks: CalendarTask[]) => {
+    // 日付ごとの重なり数をカウント
+    const dateCounts: { [key: string]: number } = {};
+    const taskOffsets: { [key: string]: number } = {};
+
+    // ソート（開始日が早い順、長い順）
+    const sorted = [...memberTasks].sort((a, b) => {
+      if (a.start_date !== b.start_date) return a.start_date.localeCompare(b.start_date);
+      return b.end_date.localeCompare(a.end_date);
+    });
+
+    return sorted.map(task => {
+      let maxOverlapInPeriod = 0;
+      let myOffset = 0;
+
+      // このタスクの期間内の各日で、すでに配置されたタスクとの衝突を確認
+      const periodDates = dates.filter(d => isBetween(formatDate(d), task.start_date, task.end_date));
+      
+      // 簡易的なオフセット割り当て
+      // 実際にはより複雑なパズル解法が必要だが、ここでは「その時点での最大重なり」を使用
+      periodDates.forEach(d => {
+        const dStr = formatDate(d);
+        dateCounts[dStr] = (dateCounts[dStr] || 0) + 1;
+        myOffset = Math.max(myOffset, dateCounts[dStr] - 1);
+      });
+
+      return {
+        ...task,
+        offset: myOffset,
+        // 全体の重なり数は後で調整が必要だが、一旦個別のオフセットで描画
+      };
+    });
+  };
 
   if (loading) return <div className="p-20 text-center animate-pulse text-dark-400">カレンダー作成中...</div>;
   if (error) return <ErrorDisplay message={error} onRetry={fetchData} />;
@@ -200,37 +229,23 @@ export function TeamCalendar() {
 
       <div className="card overflow-hidden shadow-2xl border-dark-700 max-h-[80vh] flex flex-col">
         <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-dark-600" ref={scrollRef}>
-          {/* グリッドコンテナ */}
           <div className="relative min-w-[max-content] flex">
             
-            {/* 左側: 日付列 (固定) */}
+            {/* 左側: 日付列 */}
             <div className="sticky left-0 z-30 bg-dark-900 border-r border-dark-700/50 w-16 flex-shrink-0">
-              {/* ヘッダーの角 */}
               <div className="sticky top-0 z-40 bg-dark-900 h-14 border-b border-dark-700/50 flex items-center justify-center text-[10px] text-dark-500 font-black">
                 日付
               </div>
-              {/* 日付リスト */}
               {dates.map((date) => {
                 const isTodayDate = isToday(date);
                 const holiday = getHolidayName(date);
                 const dayOfWeek = date.getDay();
-                const isSun = dayOfWeek === 0;
-                const isSat = dayOfWeek === 6;
-
-                const dateColor = isTodayDate ? 'text-accent-primary' :
-                                 holiday || isSun ? 'text-accent-danger' :
-                                 isSat ? 'text-accent-secondary' : 'text-dark-300';
+                const dateColor = isTodayDate ? 'text-accent-primary' : holiday || dayOfWeek === 0 ? 'text-accent-danger' : dayOfWeek === 6 ? 'text-accent-secondary' : 'text-dark-300';
 
                 return (
-                  <div 
-                    key={date.toISOString()} 
-                    style={{ height: ROW_HEIGHT }}
-                    className={`flex flex-col items-center justify-center border-b border-dark-700/20 bg-dark-800/95 ${isTodayDate ? 'bg-accent-primary/5' : ''}`}
-                  >
+                  <div key={date.toISOString()} style={{ height: ROW_HEIGHT }} className={`flex flex-col items-center justify-center border-b border-dark-700/20 bg-dark-800/95 ${isTodayDate ? 'bg-accent-primary/5' : ''}`}>
                     <span className={`text-lg font-black leading-none ${dateColor}`}>{date.getDate()}</span>
-                    <span className={`text-[10px] font-bold ${holiday ? 'text-accent-danger' : 'text-dark-500'}`}>
-                      {holiday || getDayOfWeek(date)}
-                    </span>
+                    <span className={`text-[10px] font-bold ${holiday ? 'text-accent-danger' : 'text-dark-500'}`}>{holiday || getDayOfWeek(date)}</span>
                   </div>
                 );
               })}
@@ -240,81 +255,68 @@ export function TeamCalendar() {
             <div className="flex flex-1">
               {visibleMembers.map((member) => {
                 const memberTasks = tasks.filter(t => t.member_id === member.id);
+                const tasksWithLayout = getTaskLayout(memberTasks);
 
                 return (
-                  <div key={member.id} className="relative min-w-[180px] border-r border-dark-700/20">
-                    {/* メンバーヘッダー (固定) */}
+                  <div key={member.id} className="relative min-w-[200px] border-r border-dark-700/20">
                     <div className="sticky top-0 z-20 bg-dark-900/95 backdrop-blur-md h-14 border-b border-dark-700/50 flex flex-col items-center justify-center gap-1">
                       <div className="w-2 h-2 rounded-full shadow-glow-sm" style={{ backgroundColor: member.color }} />
                       <span className="text-[11px] font-bold text-dark-200">{member.name}</span>
                     </div>
 
-                    {/* カラム本体 (背景グリッド) */}
                     <div className="relative">
                       {dates.map((date) => {
                         const isTodayDate = isToday(date);
                         const holiday = getHolidayName(date);
-                        const dayOfWeek = date.getDay();
-                        const rowBg = isTodayDate ? 'bg-accent-primary/10' : 
-                                     holiday ? 'bg-accent-danger/10' :
-                                     dayOfWeek === 0 ? 'bg-accent-danger/5' :
-                                     dayOfWeek === 6 ? 'bg-accent-secondary/5' : '';
-                        
-                        return (
-                          <div 
-                            key={date.toISOString()} 
-                            style={{ height: ROW_HEIGHT }}
-                            className={`border-b border-dark-700/10 ${rowBg}`}
-                          />
-                        );
+                        const rowBg = isTodayDate ? 'bg-accent-primary/10' : holiday ? 'bg-accent-danger/10' : date.getDay() === 0 ? 'bg-accent-danger/5' : date.getDay() === 6 ? 'bg-accent-secondary/5' : '';
+                        return <div key={date.toISOString()} style={{ height: ROW_HEIGHT }} className={`border-b border-dark-700/10 ${rowBg}`} />;
                       })}
 
-                      {/* タスクブロック (絶対配置 v1.13) */}
-                      {memberTasks.map(task => {
+                      {/* タスクブロック (重なり対応 v1.15) */}
+                      {tasksWithLayout.map(task => {
                         const startIndex = dates.findIndex(d => formatDate(d) === task.start_date);
                         const endIndex = dates.findIndex(d => formatDate(d) === task.end_date);
-                        
-                        // 月を跨ぐ場合のクランプ処理
                         if (startIndex === -1 && endIndex === -1) return null;
+                        
                         const actualStart = startIndex === -1 ? 0 : startIndex;
                         const actualEnd = endIndex === -1 ? dates.length - 1 : endIndex;
                         const span = actualEnd - actualStart + 1;
+
+                        // 横方向のずらし計算
+                        const widthPercent = 85; // 重なりを見せるために少し狭く
+                        const leftOffset = task.offset * 12; // 12pxずつ右にずらす
 
                         return (
                           <div 
                             key={task.id}
                             onClick={() => setEditingTask(task)}
-                            className="absolute left-1 right-1 z-10 p-1 group cursor-pointer transition-transform hover:scale-[1.01]"
+                            className="absolute z-10 p-0.5 group cursor-pointer transition-all hover:z-20 hover:scale-[1.02]"
                             style={{
                               top: actualStart * ROW_HEIGHT + 4,
                               height: span * ROW_HEIGHT - 8,
+                              left: `${4 + leftOffset}px`,
+                              width: `calc(${widthPercent}% - ${leftOffset}px)`,
                             }}
                           >
                             <div 
-                              className="h-full w-full rounded-xl shadow-glow-sm flex flex-col p-2 overflow-hidden border border-white/10"
+                              className="h-full w-full rounded-lg shadow-glow-sm flex flex-col p-2 overflow-hidden border border-white/20 backdrop-blur-sm"
                               style={{ 
-                                backgroundColor: member.color,
-                                color: getContrastColor(member.color)
+                                backgroundColor: member.color + 'dd', // 少し透明に
+                                color: getContrastColor(member.color),
+                                borderLeft: `4px solid ${member.color}`
                               }}
                             >
                               <div className="flex items-start justify-between gap-1">
-                                <span className="text-[11px] font-black leading-tight line-clamp-3">
+                                <span className="text-[10px] font-black leading-tight line-clamp-2">
                                   {task.title}
                                 </span>
                                 {endIndex !== -1 && (
-                                  <button 
-                                    onClick={(e) => handleToggleComplete(e, task)}
-                                    className="w-5 h-5 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center transition-colors flex-shrink-0"
-                                  >
-                                    <Check className="w-3.5 h-3.5" />
+                                  <button onClick={(e) => handleToggleComplete(e, task)} className="w-4 h-4 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center transition-colors flex-shrink-0">
+                                    <Check className="w-3 h-3" />
                                   </button>
                                 )}
                               </div>
-                              {task.notes && (
-                                <p className="text-[9px] mt-1 opacity-80 line-clamp-2">
-                                  {task.notes}
-                                </p>
-                              )}
+                              {task.notes && <p className="text-[8px] mt-0.5 opacity-80 line-clamp-1">{task.notes}</p>}
                             </div>
                           </div>
                         );
