@@ -21,8 +21,8 @@ export function Navigation() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-dark-700/50">
-      <div className="max-w-lg mx-auto px-4">
-        <div className="flex items-center justify-around py-2">
+      <div className="w-full">
+        <div className="flex items-center justify-between">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
@@ -31,10 +31,12 @@ export function Navigation() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`nav-item ${isActive ? 'active' : ''}`}
+                className={`flex-1 flex flex-col items-center justify-center py-3 transition-all duration-200 ${
+                  isActive ? 'bg-accent-primary/5 text-accent-primary' : 'text-dark-400'
+                }`}
               >
-                <Icon className={`w-6 h-6 ${isActive ? 'text-accent-primary' : ''}`} />
-                <span className={`text-xs ${isActive ? 'text-accent-primary font-medium' : ''}`}>
+                <Icon className={`w-6 h-6 mb-1 ${isActive ? 'scale-110' : ''}`} />
+                <span className={`text-[10px] font-bold ${isActive ? '' : 'text-dark-500'}`}>
                   {item.label}
                 </span>
               </Link>

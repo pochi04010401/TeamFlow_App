@@ -117,17 +117,17 @@ export function TaskForm({ members }: { members: Member[] }) {
           <div className="grid grid-cols-2 gap-4">
             {/* 売上金額 */}
             <div className="space-y-2">
-              <label className="text-xs font-black uppercase text-dark-500 tracking-widest ml-1">売上予定 (千円)</label>
-              <div className="relative group">
-                {/* ￥アイコン削除 (v1.17) */}
+              <label className="text-xs font-black uppercase text-dark-500 tracking-widest ml-1">売上予定</label>
+              <div className="relative flex items-center gap-2">
                 <input
                   type="number"
                   inputMode="numeric"
                   value={formData.amountStr}
                   onChange={(e) => setFormData({ ...formData, amountStr: e.target.value })}
                   placeholder="0"
-                  className="input-premium px-4"
+                  className="input-premium px-4 flex-1"
                 />
+                <span className="text-sm font-bold text-dark-400 flex-shrink-0">千円</span>
               </div>
             </div>
 
