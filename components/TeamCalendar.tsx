@@ -17,6 +17,8 @@ import { ErrorDisplay } from './ErrorBoundary';
 import { toast } from 'sonner';
 import { TaskEditModal } from './TaskEditModal';
 
+const ROW_HEIGHT = 64; // 1日の高さ
+
 // メンバー選択ドロップダウン (v1.7)
 function MemberFilter({
   members,
@@ -126,7 +128,7 @@ export function TeamCalendar() {
         .select('*, member:members(*)')
         .lte('start_date', endOfMonth)
         .gte('end_date', startOfMonth)
-        .neq('status', 'completed'); // v1.2: Always hide completed in calendar
+        .neq('status', 'completed');
 
       setMembers(membersData || []);
       setTasks(tasksData as CalendarTask[] || []);
@@ -161,27 +163,23 @@ export function TeamCalendar() {
     }
   };
 
-  const filteredTasks = useMemo(() => {
-    if (!selectedMemberId) return tasks;
-    return tasks.filter(t => t.member_id === selectedMemberId);
-  }, [tasks, selectedMemberId]);
+  const dates = useMemo(() => {
+    return Array.from(
+      { length: new Date(currentMonth.year, currentMonth.month, 0).getDate() },
+      (_, i) => new Date(currentMonth.year, currentMonth.month - 1, i + 1)
+    );
+  }, [currentMonth]);
 
-  // v1.8: フィルタされたメンバーだけを表示
   const visibleMembers = useMemo(() => {
     if (!selectedMemberId) return members;
     return members.filter(m => m.id === selectedMemberId);
   }, [members, selectedMemberId]);
 
-  const dates = Array.from(
-    { length: new Date(currentMonth.year, currentMonth.month, 0).getDate() },
-    (_, i) => new Date(currentMonth.year, currentMonth.month - 1, i + 1)
-  );
-
   if (loading) return <div className="p-20 text-center animate-pulse text-dark-400">カレンダー作成中...</div>;
   if (error) return <ErrorDisplay message={error} onRetry={fetchData} />;
 
   return (
-    <div className="space-y-4 animate-fade-in pb-20">
+    <div className="space-y-4 animate-fade-in pb-40">
       <div className="flex items-center justify-between px-2 gap-4 flex-wrap">
         <MemberFilter 
           members={members}
@@ -201,106 +199,132 @@ export function TeamCalendar() {
       </div>
 
       <div className="card overflow-hidden shadow-2xl border-dark-700 max-h-[80vh] flex flex-col">
-        <div className="overflow-auto flex-1" ref={scrollRef}>
-          <table className="w-full border-collapse table-fixed min-w-[max-content]">
-            <thead>
-              <tr className="bg-dark-900/95 sticky top-0 z-40 backdrop-blur-md">
-                <th className="p-3 text-left text-[10px] uppercase text-dark-500 font-black tracking-widest border-r border-dark-700/30 sticky left-0 bg-dark-900 z-50 w-16">日付</th>
-                {visibleMembers.map(m => (
-                  <th key={m.id} className="p-3 text-center min-w-[160px] max-w-[200px]">
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="w-2 h-2 rounded-full shadow-glow-sm" style={{ backgroundColor: m.color }} />
-                      <span className="text-[11px] font-bold text-dark-200">{m.name}</span>
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {dates.map((date, index) => {
-                const dateStr = formatDate(date);
+        <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-dark-600" ref={scrollRef}>
+          {/* グリッドコンテナ */}
+          <div className="relative min-w-[max-content] flex">
+            
+            {/* 左側: 日付列 (固定) */}
+            <div className="sticky left-0 z-30 bg-dark-900 border-r border-dark-700/50 w-16 flex-shrink-0">
+              {/* ヘッダーの角 */}
+              <div className="sticky top-0 z-40 bg-dark-900 h-14 border-b border-dark-700/50 flex items-center justify-center text-[10px] text-dark-500 font-black">
+                日付
+              </div>
+              {/* 日付リスト */}
+              {dates.map((date) => {
                 const isTodayDate = isToday(date);
                 const holiday = getHolidayName(date);
-                const dayOfWeek = date.getDay(); // 0:日, 6:土
-                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-                const isLast = index === dates.length - 1;
-                
-                // 行の背景色決定 (v1.11: 祝日・週末対応)
-                const rowBg = isTodayDate ? 'bg-accent-primary/10' : 
-                             holiday ? 'bg-accent-danger/10' :
-                             dayOfWeek === 0 ? 'bg-accent-danger/5' :
-                             dayOfWeek === 6 ? 'bg-accent-secondary/5' : '';
+                const dayOfWeek = date.getDay();
+                const isSun = dayOfWeek === 0;
+                const isSat = dayOfWeek === 6;
 
                 const dateColor = isTodayDate ? 'text-accent-primary' :
-                                 holiday || dayOfWeek === 0 ? 'text-accent-danger' :
-                                 dayOfWeek === 6 ? 'text-accent-secondary' : 'text-dark-300';
+                                 holiday || isSun ? 'text-accent-danger' :
+                                 isSat ? 'text-accent-secondary' : 'text-dark-300';
 
                 return (
-                  <tr key={dateStr} className={`border-t border-dark-700/20 ${rowBg} ${isLast ? 'pb-24' : ''}`}>
-                    <td className={`p-3 text-center border-r border-dark-700/30 sticky left-0 z-10 bg-dark-800/95 backdrop-blur-sm ${isLast ? 'rounded-bl-xl' : ''}`}>
-                      <span className={`block text-lg font-black leading-none ${dateColor}`}>{date.getDate()}</span>
-                      <span className={`text-[10px] font-bold ${holiday ? 'text-accent-danger' : 'text-dark-500'}`}>
-                        {holiday || getDayOfWeek(date)}
-                      </span>
-                    </td>
-                    {visibleMembers.map(member => {
-                      const memberTasks = filteredTasks.filter(t => 
-                        t.member_id === member.id && 
-                        isBetween(dateStr, t.start_date, t.end_date)
-                      );
-
-                      return (
-                        <td key={member.id} className="p-1 align-top min-h-[50px] relative">
-                          <div className="space-y-1">
-                            {memberTasks.map(task => {
-                              const isStart = task.start_date === dateStr;
-                              const isEnd = task.end_date === dateStr;
-                              
-                              return (
-                                <div 
-                                  key={task.id}
-                                  onClick={() => setEditingTask(task)}
-                                  className={`task-bar relative shadow-glow-sm transition-transform hover:scale-[1.02] cursor-pointer`}
-                                  style={{ 
-                                    backgroundColor: member.color,
-                                    color: getContrastColor(member.color),
-                                    borderRadius: `${isStart ? '8px' : '0'} ${isEnd ? '8px' : '0'} ${isEnd ? '8px' : '0'} ${isStart ? '8px' : '0'}`,
-                                    marginTop: '1px',
-                                    marginBottom: '1px',
-                                    borderLeft: isStart ? 'none' : `1px solid rgba(0,0,0,0.1)`,
-                                    borderRight: isEnd ? 'none' : `1px solid rgba(0,0,0,0.1)`,
-                                  }}
-                                >
-                                  <div className="flex items-center justify-between px-2 py-1 min-h-[32px]">
-                                    {isStart ? (
-                                      <span className="text-[10px] font-bold truncate leading-tight flex-1">
-                                        {task.title}
-                                      </span>
-                                    ) : (
-                                      <div className="flex-1 h-1" />
-                                    )}
-                                    {isEnd && (
-                                      <button 
-                                        onClick={(e) => handleToggleComplete(e, task)}
-                                        className="w-4 h-4 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center transition-colors flex-shrink-0 ml-1"
-                                      >
-                                        <Check className="w-2.5 h-2.5" />
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                            {isLast && <div className="h-16" />}
-                          </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
+                  <div 
+                    key={date.toISOString()} 
+                    style={{ height: ROW_HEIGHT }}
+                    className={`flex flex-col items-center justify-center border-b border-dark-700/20 bg-dark-800/95 ${isTodayDate ? 'bg-accent-primary/5' : ''}`}
+                  >
+                    <span className={`text-lg font-black leading-none ${dateColor}`}>{date.getDate()}</span>
+                    <span className={`text-[10px] font-bold ${holiday ? 'text-accent-danger' : 'text-dark-500'}`}>
+                      {holiday || getDayOfWeek(date)}
+                    </span>
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
+            </div>
+
+            {/* 右側: メンバー列 */}
+            <div className="flex flex-1">
+              {visibleMembers.map((member) => {
+                const memberTasks = tasks.filter(t => t.member_id === member.id);
+
+                return (
+                  <div key={member.id} className="relative min-w-[180px] border-r border-dark-700/20">
+                    {/* メンバーヘッダー (固定) */}
+                    <div className="sticky top-0 z-20 bg-dark-900/95 backdrop-blur-md h-14 border-b border-dark-700/50 flex flex-col items-center justify-center gap-1">
+                      <div className="w-2 h-2 rounded-full shadow-glow-sm" style={{ backgroundColor: member.color }} />
+                      <span className="text-[11px] font-bold text-dark-200">{member.name}</span>
+                    </div>
+
+                    {/* カラム本体 (背景グリッド) */}
+                    <div className="relative">
+                      {dates.map((date) => {
+                        const isTodayDate = isToday(date);
+                        const holiday = getHolidayName(date);
+                        const dayOfWeek = date.getDay();
+                        const rowBg = isTodayDate ? 'bg-accent-primary/10' : 
+                                     holiday ? 'bg-accent-danger/10' :
+                                     dayOfWeek === 0 ? 'bg-accent-danger/5' :
+                                     dayOfWeek === 6 ? 'bg-accent-secondary/5' : '';
+                        
+                        return (
+                          <div 
+                            key={date.toISOString()} 
+                            style={{ height: ROW_HEIGHT }}
+                            className={`border-b border-dark-700/10 ${rowBg}`}
+                          />
+                        );
+                      })}
+
+                      {/* タスクブロック (絶対配置 v1.13) */}
+                      {memberTasks.map(task => {
+                        const startIndex = dates.findIndex(d => formatDate(d) === task.start_date);
+                        const endIndex = dates.findIndex(d => formatDate(d) === task.end_date);
+                        
+                        // 月を跨ぐ場合のクランプ処理
+                        if (startIndex === -1 && endIndex === -1) return null;
+                        const actualStart = startIndex === -1 ? 0 : startIndex;
+                        const actualEnd = endIndex === -1 ? dates.length - 1 : endIndex;
+                        const span = actualEnd - actualStart + 1;
+
+                        return (
+                          <div 
+                            key={task.id}
+                            onClick={() => setEditingTask(task)}
+                            className="absolute left-1 right-1 z-10 p-1 group cursor-pointer transition-transform hover:scale-[1.01]"
+                            style={{
+                              top: actualStart * ROW_HEIGHT + 4,
+                              height: span * ROW_HEIGHT - 8,
+                            }}
+                          >
+                            <div 
+                              className="h-full w-full rounded-xl shadow-glow-sm flex flex-col p-2 overflow-hidden border border-white/10"
+                              style={{ 
+                                backgroundColor: member.color,
+                                color: getContrastColor(member.color)
+                              }}
+                            >
+                              <div className="flex items-start justify-between gap-1">
+                                <span className="text-[11px] font-black leading-tight line-clamp-3">
+                                  {task.title}
+                                </span>
+                                {endIndex !== -1 && (
+                                  <button 
+                                    onClick={(e) => handleToggleComplete(e, task)}
+                                    className="w-5 h-5 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center transition-colors flex-shrink-0"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                              {task.notes && (
+                                <p className="text-[9px] mt-1 opacity-80 line-clamp-2">
+                                  {task.notes}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
       
