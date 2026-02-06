@@ -11,7 +11,7 @@ export interface Member {
 }
 
 // タスクステータス
-export type TaskStatus = 'pending' | 'completed' | 'cancelled';
+export type TaskStatus = 'pending' | 'completed';
 
 // タスク (v1.1: start_date, end_date対応)
 export interface Task {

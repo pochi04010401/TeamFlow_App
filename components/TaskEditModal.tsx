@@ -184,7 +184,7 @@ export function TaskEditModal({
 
           {/* ステータス */}
           <div className="flex gap-2 p-1 bg-dark-800 rounded-xl border border-dark-700">
-            {(['pending', 'completed', 'cancelled'] as const).map(s => (
+            {(['pending', 'completed'] as const).map(s => (
               <button
                 key={s}
                 onClick={() => setFormData({...formData, status: s})}
@@ -192,7 +192,7 @@ export function TaskEditModal({
                   formData.status === s ? 'bg-accent-primary text-white shadow-glow-sm' : 'text-dark-500 hover:text-dark-200'
                 }`}
               >
-                {s === 'pending' ? '進行中' : s === 'completed' ? '完了' : '中止'}
+                {s === 'pending' ? '進行中' : '完了'}
               </button>
             ))}
           </div>
