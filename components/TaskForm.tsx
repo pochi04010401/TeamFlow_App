@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { PlusCircle, Calendar, JapaneseYen, Zap, User, Loader2, ChevronDown, FileText } from 'lucide-react';
+import { PlusCircle, Calendar, Zap, User, Loader2, ChevronDown, FileText } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getCurrentDate } from '@/lib/utils';
 import type { Member, TaskFormData } from '@/lib/types';
@@ -119,14 +119,14 @@ export function TaskForm({ members }: { members: Member[] }) {
             <div className="space-y-2">
               <label className="text-xs font-black uppercase text-dark-500 tracking-widest ml-1">売上予定 (千円)</label>
               <div className="relative group">
-                <JapaneseYen className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 group-focus-within:text-accent-success transition-colors" />
+                {/* ￥アイコン削除 (v1.17) */}
                 <input
                   type="number"
                   inputMode="numeric"
                   value={formData.amountStr}
                   onChange={(e) => setFormData({ ...formData, amountStr: e.target.value })}
-                  placeholder="50"
-                  className="input-premium pl-12"
+                  placeholder="0"
+                  className="input-premium px-4"
                 />
               </div>
             </div>

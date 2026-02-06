@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { TrendingUp, Zap, Activity, CheckCircle2, Trophy, Users, User, Download, Calendar } from 'lucide-react';
+import { TrendingUp, Zap, Activity, CheckCircle2, Trophy, Download, Calendar } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { 
   formatCurrency, 
@@ -11,42 +11,10 @@ import {
   formatDateJP,
   exportTasksToCSV
 } from '@/lib/utils';
-import type { Task, DashboardSummary, MemberStats, Member, ViewMode, RankingPeriod } from '@/lib/types';
+import type { Task, DashboardSummary, MemberStats, Member, RankingPeriod } from '@/lib/types';
 import { ErrorDisplay } from './ErrorBoundary';
 import { MemberFilter } from './MemberFilter';
 import { toast } from 'sonner';
-
-// ビュー切り替えトグル
-function ViewToggle({ 
-  viewMode, 
-  onToggle 
-}: { 
-  viewMode: ViewMode; 
-  onToggle: (mode: ViewMode) => void;
-}) {
-  return (
-    <div className="flex items-center gap-2 p-1 rounded-xl bg-dark-700/50">
-      <button
-        onClick={() => onToggle('personal')}
-        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
-          viewMode === 'personal' ? 'bg-accent-primary text-white' : 'text-dark-400 hover:text-dark-200'
-        }`}
-      >
-        <User className="w-4 h-4" />
-        <span className="text-sm font-medium">個人</span>
-      </button>
-      <button
-        onClick={() => onToggle('team')}
-        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
-          viewMode === 'team' ? 'bg-accent-primary text-white' : 'text-dark-400 hover:text-dark-200'
-        }`}
-      >
-        <Users className="w-4 h-4" />
-        <span className="text-sm font-medium">全体</span>
-      </button>
-    </div>
-  );
-}
 
 // ランキング期間切り替え
 function RankingPeriodToggle({
@@ -254,7 +222,6 @@ export function Dashboard() {
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('team');
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [rankingPeriod, setRankingPeriod] = useState<RankingPeriod>('monthly');
 
@@ -303,11 +270,11 @@ export function Dashboard() {
   useEffect(() => { fetchDashboardData(); }, []);
 
   const filteredSummary = useMemo(() => {
-    if (!summary || !selectedMemberId || viewMode !== 'personal') return summary;
+    if (!summary || !selectedMemberId) return summary;
     const stat = memberStats.find(s => s.member.id === selectedMemberId);
     if (!stat) return summary;
     return { ...summary, completedAmount: stat.completedAmount, pendingAmount: stat.totalAmount - stat.completedAmount, completedPoints: stat.completedPoints, pendingPoints: stat.totalPoints - stat.completedPoints, recentActivities: summary.recentActivities.filter(t => t.member_id === selectedMemberId), monthlyCompletedCount: stat.completedTaskCount };
-  }, [summary, selectedMemberId, viewMode, memberStats]);
+  }, [summary, selectedMemberId, memberStats]);
 
   if (loading) return <DashboardSkeleton />;
   if (error) return <ErrorDisplay message={error} onRetry={fetchDashboardData} />;
@@ -317,8 +284,7 @@ export function Dashboard() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3 flex-wrap">
-          <ViewToggle viewMode={viewMode} onToggle={setViewMode} />
-          {viewMode === 'personal' && <MemberFilter members={members} selectedMemberId={selectedMemberId} onSelect={setSelectedMemberId} />}
+          <MemberFilter members={members} selectedMemberId={selectedMemberId} onSelect={setSelectedMemberId} />
         </div>
         <CSVExportButton tasks={allTasks} />
       </div>
@@ -327,7 +293,7 @@ export function Dashboard() {
       <Meter label="売上" icon={TrendingUp} completed={filteredSummary.completedAmount} pending={filteredSummary.pendingAmount} target={filteredSummary.targetAmount} formatValue={formatCurrency} color="primary" />
       <Meter label="ポイント" icon={Zap} completed={filteredSummary.completedPoints} pending={filteredSummary.pendingPoints} target={filteredSummary.targetPoints} formatValue={(n) => `${formatNumber(n)}pt`} color="secondary" />
 
-      {viewMode === 'team' && (
+      {!selectedMemberId && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <MemberRanking stats={memberStats} yearlyStats={yearlyMemberStats} type="amount" period={rankingPeriod} onPeriodChange={setRankingPeriod} />
           <MemberRanking stats={memberStats} yearlyStats={yearlyMemberStats} type="points" period={rankingPeriod} onPeriodChange={setRankingPeriod} />
@@ -335,7 +301,7 @@ export function Dashboard() {
       )}
 
       <RecentActivity tasks={filteredSummary.recentActivities} />
-      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.16</span></div>
+      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.17</span></div>
     </div>
   );
 }
