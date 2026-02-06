@@ -5,10 +5,21 @@ export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }
 
+// 現在の時刻を日本標準時（JST）で取得
+export function getNowJST(): Date {
+  const now = new Date();
+  return new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+}
+
 // 日付を YYYY-MM-DD 形式にフォーマット
 export function formatDate(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toISOString().split('T')[0];
+  // JSTに変換して取得
+  const jstDate = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+  const year = jstDate.getFullYear();
+  const month = String(jstDate.getMonth() + 1).padStart(2, '0');
+  const day = String(jstDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 // 日付を日本語形式にフォーマット
@@ -18,12 +29,13 @@ export function formatDateJP(date: Date | string): string {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
+    timeZone: 'Asia/Tokyo',
   }).format(d);
 }
 
 // 月を YYYY-MM 形式で取得
 export function getCurrentMonth(): string {
-  const now = new Date();
+  const now = getNowJST();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
@@ -58,13 +70,9 @@ export function getMonthDates(year: number, month: number): Date[] {
 
 // 今日の日付かどうかチェック
 export function isToday(date: Date | string): boolean {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  const today = new Date();
-  return (
-    d.getDate() === today.getDate() &&
-    d.getMonth() === today.getMonth() &&
-    d.getFullYear() === today.getFullYear()
-  );
+  const dStr = formatDate(date);
+  const todayStr = formatDate(getNowJST());
+  return dStr === todayStr;
 }
 
 // 曜日を取得（日本語）
@@ -233,5 +241,5 @@ export function isBetween(dateStr: string, start: string, end: string): boolean 
 
 // 現在の日付を取得
 export function getCurrentDate(): string {
-  return new Date().toISOString().split('T')[0];
+  return formatDate(getNowJST());
 }
