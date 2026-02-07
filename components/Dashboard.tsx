@@ -49,7 +49,6 @@ function RankingPeriodToggle({
 // メーターコンポーネント
 function Meter({ 
   label, 
-  icon: Icon,
   completed, 
   pending, 
   target,
@@ -57,7 +56,6 @@ function Meter({
   color = 'primary'
 }: { 
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
   completed: number;
   pending: number;
   target: number;
@@ -69,9 +67,6 @@ function Meter({
   return (
     <div className="card p-5">
       <div className="flex items-center gap-3 mb-4">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color === 'primary' ? 'bg-accent-success/20' : 'bg-accent-secondary/20'}`}>
-          <Icon className={`w-5 h-5 ${color === 'primary' ? 'text-accent-success' : 'text-accent-secondary'}`} />
-        </div>
         <div>
           <h3 className="font-medium text-dark-200">{label} {label === '売上' && '(千円)'}</h3>
           <p className="text-sm text-dark-400">目標: {formatValue(target)}</p>
@@ -290,8 +285,8 @@ export function Dashboard() {
       </div>
 
       <MonthlyCompletionCard count={filteredSummary.monthlyCompletedCount} totalAmount={filteredSummary.completedAmount} />
-      <Meter label="売上" icon={TrendingUp} completed={filteredSummary.completedAmount} pending={filteredSummary.pendingAmount} target={filteredSummary.targetAmount} formatValue={formatCurrency} color="primary" />
-      <Meter label="ポイント" icon={Zap} completed={filteredSummary.completedPoints} pending={filteredSummary.pendingPoints} target={filteredSummary.targetPoints} formatValue={(n) => `${formatNumber(n)}pt`} color="secondary" />
+      <Meter label="売上" completed={filteredSummary.completedAmount} pending={filteredSummary.pendingAmount} target={filteredSummary.targetAmount} formatValue={formatCurrency} color="primary" />
+      <Meter label="ポイント" completed={filteredSummary.completedPoints} pending={filteredSummary.pendingPoints} target={filteredSummary.targetPoints} formatValue={(n) => `${formatNumber(n)}pt`} color="secondary" />
 
       {!selectedMemberId && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -302,7 +297,7 @@ export function Dashboard() {
 
       {/* 最近のアクティビティ */}
       <RecentActivity tasks={filteredSummary.recentActivities} />
-      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.25</span></div>
+      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.26</span></div>
     </div>
   );
 }

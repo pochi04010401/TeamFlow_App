@@ -58,7 +58,6 @@ export function Header() {
           </div>
 
           <div className="space-y-2 flex-1">
-            {/* 分析メニューをここに移動 (v1.24) */}
             <Link 
               href="/analytics" 
               onClick={() => setIsOpen(false)}
@@ -70,7 +69,6 @@ export function Header() {
               <span className="font-bold">チーム分析</span>
             </Link>
 
-// 目標管理をここに追加 (v1.24)
             <Link 
               href="/settings" 
               onClick={() => setIsOpen(false)}
