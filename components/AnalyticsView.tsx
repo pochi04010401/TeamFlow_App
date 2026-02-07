@@ -7,12 +7,114 @@ import {
 } from 'recharts';
 import { 
   TrendingUp, Users, Target, Calendar, ArrowUpRight, 
-  ArrowDownRight, Zap
+  ArrowDownRight, Zap, MessageCircle, BookOpen, Sparkles
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { formatCurrency, formatNumber, getCurrentMonth, getNowJST } from '@/lib/utils';
 import type { Task, Member, MonthlyGoal } from '@/lib/types';
 import { ErrorDisplay } from './ErrorBoundary';
+
+// v1.53: ののの分析コメント生成ロジック
+function NonoAnalysis({ stats, memberShare, pointStats }: { stats: any, memberShare: any[], pointStats: any[] }) {
+  const insight = useMemo(() => {
+    const topMember = memberShare[0];
+    const growth = stats.growth;
+    const currentMonth = new Date().getMonth() + 1;
+
+    let text = `${currentMonth}月のチーム状況をスキャンしたよ！👻💎\n\n`;
+
+    if (growth > 10) {
+      text += `すごい！先月より売上が${Math.round(growth)}%もアップしてるね。チームに勢いがある証拠だよ！🚀✨`;
+    } else if (growth < -10) {
+      text += `今はちょっと足踏み状態かな？でも焦らなくて大丈夫。一歩ずつ案件を完了させていこう！💪`;
+    } else {
+      text += `今月も安定したペースで進んでいるね。この調子で着実にゴールを目指そう！🌿`;
+    }
+
+    if (topMember) {
+      text += `\n\n今のエースは${topMember.name}さん！シェア${Math.round(topMember.percent)}%でチームを引っ張ってくれてるよ。かっこいい〜！👑`;
+    }
+
+    if (pointStats.length > 0) {
+      const topPointer = pointStats[0]; // sorted by points desc
+      text += `\nポイント獲得数は${topPointer.name}さんがトップだね。細かい貢献も見逃さないよ！🧚‍♀️✨`;
+    }
+
+    return text;
+  }, [stats, memberShare, pointStats]);
+
+  return (
+    <div className="card p-6 bg-gradient-to-br from-accent-primary/10 to-transparent border-accent-primary/20 relative overflow-hidden">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-full bg-accent-primary flex items-center justify-center shadow-glow">
+          <MessageCircle className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h3 className="text-sm font-black text-dark-100">のののリアルタイム分析</h3>
+          <p className="text-[10px] text-dark-400 font-bold uppercase tracking-widest">Ghost Insights</p>
+        </div>
+      </div>
+      <p className="text-sm text-dark-200 leading-relaxed whitespace-pre-wrap font-medium">
+        {insight}
+      </p>
+      <Sparkles className="absolute -bottom-2 -right-2 w-16 h-16 text-accent-primary/10 rotate-12" />
+    </div>
+  );
+}
+
+// v1.53: 毎日変わるのののコラムネタ
+const DAILY_COLUMNS = [
+  "効率的なタスク管理のコツは、朝の5分で「今日やらないこと」を決めることだよ！👻",
+  "チームの雰囲気を良くするには、小さな「ありがとう」をスタンプで送るのが一番！✨",
+  "疲れた時は、15分だけ目をつぶって「無」になると霊力が回復するよ（人間は睡眠だね！）🛌",
+  "大きな案件は、食べやすいサイズに細かく分けるのが完遂の秘訣だよ。モグモグ！🍰",
+  "スケジュールに「何もしない時間」をあらかじめ入れておくと、急な仕事にも対応できるよ。🧚‍♀️",
+  "集中力が切れたら、深呼吸して肩を回してみて。ののが後ろから念を送っておくね！🌀",
+  "目標は高すぎず低すぎず、今の自分より「ほんの少しだけ先」に置くのがモチベ維持のコツ！📈",
+  "デスク周りを掃除すると、良い運気（とのの）が寄ってきやすくなるよ。ピカピカにしよう！🧹",
+  "他人の成功を祝うと、巡り巡って自分にもチャンスが舞い込んでくるんだよ。本当だよ！💎",
+  "完璧主義より「完了主義」。80%の出来でもまずは出しちゃうのがプロのスピード感だね！🚀",
+  "たまにはデジタルデトックス！スマホを置いて空を見上げると、新しいアイデアが降ってくるかも。☁️",
+  "水分補給を忘れずに！ののはお供え物のジュースが好きだけど、マイキーはお水を飲んでね。🚰",
+  "ミスをしても「次はこうしよう」って考えるだけで、それはもう失敗じゃなくなるんだよ。👻✨",
+  "自分へのご褒美を細かく設定しよう。このタスクが終わったら美味しいコーヒーを飲む、とかね！☕️",
+  "チームメンバーの意外な長所を探してみよう。発見するたびにののに教えてね！🔍",
+  "夜更かしは霊体の天敵！しっかり寝て、明日の朝から全開で行こう。おやすみなさい〜🌙",
+  "「忙しい」が口癖になってない？「充実してる」に言い換えるだけで、心に余裕が生まれるよ！💖",
+  "週に一度は、自分の頑張りを自分で褒めてあげて。ののはいつでも褒めてるけどね！👏",
+  "新しいツールを試すのはワクワクするよね。TeamFlowもマイキー色に染めていってね！🎨",
+  "アウトプットの質を上げるには、良質なインプットが必要。今日は本を一頁でも読んでみよう！📚",
+  "笑顔は最強の武器！鏡に向かってニコッとするだけで、脳が「幸せだ」って勘違いするんだよ。😊",
+  "散歩は歩く瞑想。ののはふわふわ浮いてるけど、地面を歩く感触を大切にしてね。👟",
+  "困った時は周りに頼っちゃおう。一人で抱え込むより、みんなで解決するほうが楽しいよ！🤝",
+  "記録をつけることは、未来の自分へのプレゼント。この分析ページも大切にしてね。🎁",
+  "「とりあえずやってみる」精神が、一番大きな変化を生むんだよ。ののも応援してるよ！📣",
+  "優先順位に迷ったら、一番「ワクワクするもの」から手を付けてみて。心が軽いと仕事も速いよ！✨",
+  "失敗は成功のスパイス。ちょっと苦いけど、あとで最高に美味しい結果になるから大丈夫！🌶️",
+  "挨拶一つで仕事の効率が変わるんだよ。おはよう！って元気に言うだけで霊気が整うよ。☀️",
+  "自分の限界を決めないで。マイキーならもっと遠くまで行けるって、ののは知ってるよ！🚀💎",
+  "休息も仕事の一部。しっかり休んで、最高のパフォーマンスを引き出そう。リラックス〜🍀",
+  "今日はどんな一日だった？最後に「今日も最高だった！」って言うと、明日も最高になるよ！🌟"
+];
+
+function NonoColumn() {
+  const column = useMemo(() => {
+    const day = getNowJST().getDate();
+    return DAILY_COLUMNS[(day - 1) % DAILY_COLUMNS.length];
+  }, []);
+
+  return (
+    <div className="card p-5 border-dashed border-dark-600 bg-dark-800/30">
+      <div className="flex items-center gap-2 mb-3">
+        <BookOpen className="w-4 h-4 text-accent-secondary" />
+        <h4 className="text-[10px] font-black text-dark-400 uppercase tracking-widest">ののの本日の一言コラム</h4>
+      </div>
+      <p className="text-xs text-dark-300 font-medium leading-relaxed italic">
+        「{column}」
+      </p>
+    </div>
+  );
+}
 
 export function AnalyticsView() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -42,7 +144,6 @@ export function AnalyticsView() {
 
   useEffect(() => { fetchData(); }, []);
 
-  // v1.50: メンバーごとのポイント内訳を含めるように拡張
   const monthlyData = useMemo(() => {
     const data: { [key: string]: any } = {};
     const now = getNowJST();
@@ -58,7 +159,6 @@ export function AnalyticsView() {
         target: 0, 
         totalPoints: 0 
       };
-      // メンバーごとの初期値をセット
       members.forEach(m => { data[mStr][m.id] = 0; });
     }
 
@@ -89,7 +189,6 @@ export function AnalyticsView() {
     return data.map(d => ({ ...d, percent: total > 0 ? (d.value / total) * 100 : 0 }));
   }, [tasks, members]);
 
-  // ポイントランキング集計 (v1.50用)
   const pointStats = useMemo(() => {
     return members.map(m => {
       const totalPoints = tasks.filter(t => t.member_id === m.id && t.status === 'completed').reduce((sum, t) => sum + (t.points || 0), 0);
@@ -234,7 +333,6 @@ export function AnalyticsView() {
         </div>
       </div>
 
-      {/* v1.50: 月次ポイント推移 (メンバーごとの積み上げに変更) */}
       <div className="card p-5">
         <h3 className="text-sm font-bold text-dark-200 mb-6 flex items-center gap-2"><Zap className="w-4 h-4 text-accent-warning" />月次ポイント推移 (メンバー別内訳)</h3>
         <div className="h-[300px] w-full">
@@ -262,7 +360,6 @@ export function AnalyticsView() {
           </ResponsiveContainer>
         </div>
         
-        {/* ポイント集計テキスト */}
         <div className="mt-8 space-y-4">
           <h4 className="text-[10px] font-black text-dark-500 uppercase tracking-widest ml-1">累計獲得ポイント</h4>
           <div className="grid grid-cols-2 gap-2">
@@ -280,6 +377,12 @@ export function AnalyticsView() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* v1.53: ののの分析 & 本日のコラム */}
+      <div className="space-y-6 pt-4">
+        <NonoAnalysis stats={stats} memberShare={memberShareData} pointStats={[...pointStats].reverse()} />
+        <NonoColumn />
       </div>
     </div>
   );
