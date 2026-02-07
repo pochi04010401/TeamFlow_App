@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { TrendingUp, Zap, Activity, CheckCircle2, Trophy, Download, Calendar, Crown, Sparkles } from 'lucide-react';
+import { TrendingUp, Zap, Activity, CheckCircle2, Trophy, Download, Calendar, Crown, Sparkles, MessageSquare, Lightbulb } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { 
   formatCurrency, 
@@ -49,7 +49,7 @@ function RankingPeriodToggle({
   );
 }
 
-// メーターコンポーネント (v1.49: 演出の安定化)
+// メーターコンポーネント (v1.44)
 function Meter({ 
   label, 
   completed, 
@@ -69,7 +69,6 @@ function Meter({
   const pendingPercent = calculatePercentage(completed + pending, target);
   const isGoalReached = completedPercent >= 100;
 
-  // v1.49: マウント時またはデータ更新時に条件を満たしていれば演出を実行
   useEffect(() => {
     if (isGoalReached) {
       const timer = setTimeout(() => fireConfetti(), 1000);
@@ -117,6 +116,109 @@ function Meter({
           <span className="text-sm font-black text-accent-warning">{formatValue(completed + pending)}</span>
         </div>
       </div>
+    </div>
+  );
+}
+
+// v1.54: 見習いアナリストの現状分析
+function AnalystInsight({ summary, memberStats }: { summary: DashboardSummary, memberStats: MemberStats[] }) {
+  const insight = useMemo(() => {
+    const revenuePercent = calculatePercentage(summary.completedAmount, summary.targetAmount);
+    const pointPercent = calculatePercentage(summary.completedPoints, summary.targetPoints);
+    const topMember = [...memberStats].sort((a, b) => b.completedAmount - a.completedAmount)[0];
+    const now = getNowJST();
+    const dayOfMonth = now.getDate();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const monthProgress = Math.round((dayOfMonth / daysInMonth) * 100);
+
+    let text = `現在、${now.getMonth() + 1}月の営業日数の約${monthProgress}%が経過しました。現状のデータを分析します。📊\n\n`;
+
+    if (revenuePercent >= monthProgress) {
+      text += `売上達成率は${revenuePercent}%と、カレンダーの進捗を上回る非常に良いペースです。目標達成の可能性が高いでしょう。🚀✨`;
+    } else {
+      text += `売上達成率は${revenuePercent}%で、目標に対してやや遅れが見られます。後半の巻き返しに期待しましょう。💪`;
+    }
+
+    if (topMember && topMember.completedAmount > 0) {
+      text += `\n\n現在の貢献度トップは${topMember.member.name}さんです。チーム全体の売上の多くを牽引しています。`;
+    }
+
+    if (pointPercent > 80) {
+      text += `\nまた、ポイント達成率が${pointPercent}%を超えており、チームの質的な活動も非常に活発であると評価できます。🧚‍♀️`;
+    }
+
+    return text;
+  }, [summary, memberStats]);
+
+  return (
+    <div className="card p-6 bg-gradient-to-br from-blue-500/10 to-transparent border-blue-500/20 relative overflow-hidden">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-glow">
+          <MessageSquare className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h3 className="text-sm font-black text-dark-100">見習いアナリストの現状分析</h3>
+          <p className="text-[10px] text-dark-400 font-bold uppercase tracking-widest">Progress Audit</p>
+        </div>
+      </div>
+      <p className="text-sm text-dark-200 leading-relaxed whitespace-pre-wrap font-medium relative z-10">
+        {insight}
+      </p>
+      <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl" />
+    </div>
+  );
+}
+
+// v1.54: 本日のビジネスコラム
+const BUSINESS_COLUMNS = [
+  "生産性を高めるには「ポモドーロ・テクニック」が有効です。25分集中して5分休むリズムを試してみてください。⏱",
+  "良質な睡眠は最高のビジネススキルです。7時間以上の睡眠を確保することで、判断力と創造性が維持されます。🛌",
+  "「結論から話す」PREP法を意識するだけで、チーム内のコミュニケーションコストは劇的に下がります。🗣",
+  "マルチタスクは脳の効率を40%低下させると言われています。一つの作業を終えてから次へ進みましょう。🎯",
+  "デスクに観葉植物を置くと、ストレスが軽減され、集中力が15%向上するという研究結果があります。🌱",
+  "完璧を目指すより、まずは期限を守る。スピードは信頼に直結する最大の武器です。🚀",
+  "週に一度、振り返りの時間（1人合宿）を作ることで、長期的な目標とのズレを修正できます。🧭",
+  "「No」を言う勇気を持ちましょう。重要でないタスクを断ることで、本当に価値のある仕事に集中できます。🛡",
+  "メールやチャットの通知をオフにする時間を作りましょう。深い集中（ディープワーク）が成果を生みます。🤫",
+  "ポジティブなフィードバックは、チームの生産性を向上させる最も安価で効果的な投資です。👏",
+  "散歩をしながら考えると、座っている時よりも創造的なアイデアが出やすくなります。👟",
+  "タスクを記録する行為そのものが、脳のワーキングメモリを解放し、ストレスを軽減させます。📝",
+  "失敗を「経験値」と呼び替えましょう。挑戦の数だけ、チームは強くなります。💎",
+  "水分補給は脳のパフォーマンスに直結します。一日に1.5〜2リットルの水を目安に。🚰",
+  "感謝の言葉は脳内報酬系を活性化させます。「ありがとう」を惜しみなく伝えましょう。✨",
+  "5分以内に終わるタスクは、後回しにせず「今すぐ」やってしまいましょう。🧹",
+  "朝一番に最も困難なタスク（カエルを食べる）を終わらせると、一日の充実感が変わります。🐸",
+  "目標設定はSMARTの法則（具体的、測定可能、達成可能、関連性、期限）を意識しましょう。📈",
+  "定期的なデジタルデトックスは、脳の疲労をリセットし、新しい視点を与えてくれます。📵",
+  "整理整頓されたPCデスクトップは、心の整理整頓にも繋がります。不要なファイルは削除を。🗑",
+  "他人の意見を批判する前に、まずは「YES, AND」で受け止める文化がイノベーションを生みます。💡",
+  "健康管理も仕事の一部です。無理な残業よりも、継続可能なペースを維持しましょう。🌿",
+  "新しいスキルの習得には、一日15分の積み重ねが、一年後には大きな差になります。📚",
+  "笑顔は周囲に伝染します。リーダーの機嫌が、チームの生産性を左右することを忘れずに。😊",
+  "「とりあえずやってみる」プロトタイプ思考が、不確実な時代の最速の正解への道です。🔨",
+  "優先順位の判断に迷ったら「それはお客様の利益になるか？」に立ち返りましょう。🤝",
+  "困難な問題に直面した時こそ、ユーモアを。心の余裕が解決策を引き寄せます。🎭",
+  "デスクの高さや椅子の設定を見直すだけで、長時間の作業効率が劇的に改善します。💺",
+  "情報の共有を惜しまない。オープンな情報文化が、個人の判断スピードを加速させます。📡",
+  "自分の限界を知ることもプロの仕事です。無理な時は早めに周囲にアラートを出しましょう。🔔",
+  "「今日も一日お疲れ様でした！」と自分に言う習慣が、明日への活力になります。🌟"
+];
+
+function BusinessColumn() {
+  const column = useMemo(() => {
+    const day = getNowJST().getDate();
+    return BUSINESS_COLUMNS[(day - 1) % BUSINESS_COLUMNS.length];
+  }, []);
+
+  return (
+    <div className="card p-5 border-dashed border-dark-600 bg-dark-800/30">
+      <div className="flex items-center gap-2 mb-3">
+        <Lightbulb className="w-4 h-4 text-accent-warning" />
+        <h4 className="text-[10px] font-black text-dark-400 uppercase tracking-widest">本日のビジネス Tips</h4>
+      </div>
+      <p className="text-xs text-dark-300 font-medium leading-relaxed italic">
+        「{column}」
+      </p>
     </div>
   );
 }
@@ -212,12 +314,11 @@ function RecentActivity({ tasks }: { tasks: Task[] }) {
   );
 }
 
-// CSV出力ボタン (v1.45: 全ステータスを出力するように改善)
+// CSV出力ボタン
 function CSVExportButton({ tasks }: { tasks: Task[] }) {
   const handleExport = () => {
     if (tasks.length === 0) { toast.error('エクスポートするタスクがありません'); return; }
     
-    // 全てのステータス（進行中、完了、キャンセル、削除）を日本語で出力
     const headers = ['ID', 'タイトル', '金額', 'ポイント', '担当者', 'ステータス', '開始日', '終了日', '完了日', '作成日'];
     const rows = tasks.map(task => [
       task.id,
@@ -287,7 +388,6 @@ export function Dashboard() {
       const now = getNowJST();
       const currentYear = now.getFullYear();
 
-      // 目標の取得
       const { data: goalsData } = await supabase
         .from('monthly_goals')
         .select('*')
@@ -295,13 +395,11 @@ export function Dashboard() {
       
       const goals = goalsData && goalsData.length > 0 ? goalsData[0] : null;
 
-      // 月の開始日と終了日を計算 (JST基準)
       const startOfMonth = `${currentMonth}-01`;
       const [y, m] = currentMonth.split('-').map(Number);
       const lastDay = new Date(y, m, 0).getDate();
       const endOfMonth = `${currentMonth}-${String(lastDay).padStart(2, '0')}`;
       
-      // タスクの取得 (集計用は進行中・完了のみ)
       const { data: tasks, error: tasksError } = await supabase
         .from('tasks')
         .select('*, member:members(*)')
@@ -311,22 +409,16 @@ export function Dashboard() {
       
       if (tasksError) throw tasksError;
 
-      // 全タスク取得 (CSV出力用：削除以外)
       const { data: rawAllTasks } = await supabase
         .from('tasks')
         .select('*, member:members(*)')
         .neq('status', 'deleted')
         .order('created_at', { ascending: false });
 
-      // 年間ランキング用
       const { data: yearlyTasks } = await supabase.from('tasks').select('*, member:members(*)').gte('completed_at', `${currentYear}-01-01`).lte('completed_at', `${currentYear}-12-31`).eq('status', 'completed');
-      
-      // v1.49: 最新アクティビティから削除済みを除外
       const { data: recentTasks } = await supabase.from('tasks').select('*').in('status', ['pending', 'completed']).order('completed_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(5);
-      
       const { data: membersData } = await supabase.from('members').select('*').order('created_at');
       
-      // 今月分に絞り込み
       const currentMonthTasks = (tasks || []).filter(t => {
         const start = t.start_date || t.scheduled_date;
         const end = t.end_date || t.scheduled_date;
@@ -385,7 +477,7 @@ export function Dashboard() {
   if (!summary || !filteredSummary) return null;
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in pb-32 px-2">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3 flex-wrap">
           <MemberFilter members={members} selectedMemberId={selectedMemberId} onSelect={setSelectedMemberId} />
@@ -405,7 +497,14 @@ export function Dashboard() {
       )}
 
       <RecentActivity tasks={filteredSummary.recentActivities} />
-      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.53</span></div>
+
+      {/* v1.54: 見習いアナリストの現状分析 & 本日のビジネス Tips (ホームへ移動) */}
+      <div className="space-y-6 pt-4 border-t border-dark-700/50">
+        <AnalystInsight summary={summary} memberStats={memberStats} />
+        <BusinessColumn />
+      </div>
+
+      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.54</span></div>
     </div>
   );
 }
