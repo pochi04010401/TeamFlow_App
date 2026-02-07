@@ -74,6 +74,23 @@ export function AnalyticsView() {
     return data.map(d => ({ ...d, percent: total > 0 ? (d.value / total) * 100 : 0 }));
   }, [tasks, members]);
 
+  // v1.28: 目標 vs 実績データ
+  const goalVsActualData = useMemo(() => {
+    const currentMonth = getCurrentMonth();
+    const currentGoal = goals.find(g => g.month === currentMonth);
+    const thisMonthRevenue = tasks
+      .filter(t => {
+        if (t.status !== 'completed' || !t.completed_at) return false;
+        return t.completed_at.startsWith(currentMonth);
+      })
+      .reduce((sum, t) => sum + (t.amount || 0), 0) / 1000;
+
+    return [
+      { name: '目標', value: (currentGoal?.target_amount || 10000000) / 1000, fill: '#64748b' },
+      { name: '実績', value: thisMonthRevenue, fill: '#10b981' }
+    ];
+  }, [tasks, goals]);
+
   const stats = useMemo(() => {
     const currentMonth = getCurrentMonth();
     const thisMonthTasks = tasks.filter(t => {
@@ -137,6 +154,22 @@ export function AnalyticsView() {
             <p className="text-[10px] text-dark-500 font-bold uppercase tracking-wider">平均案件単価</p>
             <p className="text-lg font-black text-dark-100">{formatNumber(Math.round(stats.avgTaskPrice))}<span className="text-xs ml-0.5">千円</span></p>
           </div>
+        </div>
+      </div>
+
+      {/* 目標 vs 実績 (v1.28) */}
+      <div className="card p-5">
+        <h3 className="text-sm font-bold text-dark-200 mb-6 flex items-center gap-2"><Target className="w-4 h-4 text-accent-primary" />今月の目標達成状況</h3>
+        <div className="h-[200px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={goalVsActualData} layout="vertical" margin={{ left: 20, right: 40 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false} />
+              <XAxis type="number" stroke="#94a3b8" fontSize={10} hide />
+              <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={12} width={40} />
+              <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '12px' }} />
+              <Bar dataKey="value" name="売上 (千円)" radius={[0, 4, 4, 0]} barSize={32} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 

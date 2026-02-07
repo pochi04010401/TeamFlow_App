@@ -98,6 +98,7 @@ function Meter({
           <span className="text-accent-success font-medium">{formatValue(completed)}</span>
           <span className="text-dark-500 ml-1">確定</span>
         </div>
+        <div className="text-xs text-dark-500 italic opacity-50">目標: {formatValue(target)}</div>
         <div>
           <span className="text-accent-warning font-medium">{formatValue(pending)}</span>
           <span className="text-dark-500 ml-1">見込み</span>
@@ -313,6 +314,7 @@ export function Dashboard() {
       )}
 
       <RecentActivity tasks={filteredSummary.recentActivities} />
+      {/* バージョン表示 (v1.28) */}
       <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.28</span></div>
     </div>
   );

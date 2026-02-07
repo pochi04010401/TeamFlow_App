@@ -53,14 +53,14 @@ export function SettingsView() {
     try {
       const supabase = createClient();
       
-      // UPSERT (v1.24: onConflictを省略して自動判定に任せる)
+      // UPSERT (v1.28: 確実にmonthカラムでの重複チェックを行う)
       const { error } = await supabase
         .from('monthly_goals')
         .upsert({
           month: selectedMonth,
           target_amount: goalData.target_amount * 1000,
           target_points: goalData.target_points
-        });
+        }, { onConflict: 'month' });
 
       if (error) throw error;
       toast.success(`${selectedMonth}の目標を保存しました！`);
