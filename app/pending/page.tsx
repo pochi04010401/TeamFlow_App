@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { PendingTasks } from '@/components/PendingTasks';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { TsukiTips } from '@/components/TsukiTips';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -28,6 +29,11 @@ export default async function PendingPage() {
       <ErrorBoundary>
         <PendingTasks />
       </ErrorBoundary>
+
+      {/* ツキちゃんのコーナー（一番下へ移動） */}
+      <div className="mt-12 pt-6 border-t border-dark-700/50">
+        <TsukiTips />
+      </div>
     </div>
   );
 }

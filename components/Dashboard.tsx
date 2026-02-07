@@ -18,6 +18,7 @@ import type { Task, DashboardSummary, MemberStats, Member, RankingPeriod } from 
 import { ErrorDisplay } from './ErrorBoundary';
 import { MemberFilter } from './MemberFilter';
 import { toast } from 'sonner';
+import { BusinessColumn } from './BusinessColumn';
 
 // ランキング期間切り替え
 function RankingPeriodToggle({
@@ -121,53 +122,7 @@ function Meter({
 }
 
 // v1.54: 見習いアナリストの現状分析
-function AnalystInsight({ summary, memberStats }: { summary: DashboardSummary, memberStats: MemberStats[] }) {
-  const insight = useMemo(() => {
-    const revenuePercent = calculatePercentage(summary.completedAmount, summary.targetAmount);
-    const pointPercent = calculatePercentage(summary.completedPoints, summary.targetPoints);
-    const topMember = [...memberStats].sort((a, b) => b.completedAmount - a.completedAmount)[0];
-    const now = getNowJST();
-    const dayOfMonth = now.getDate();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const monthProgress = Math.round((dayOfMonth / daysInMonth) * 100);
-
-    let text = `現在、${now.getMonth() + 1}月の営業日数の約${monthProgress}%が経過しました。現状のデータを分析します。📊\n\n`;
-
-    if (revenuePercent >= monthProgress) {
-      text += `売上達成率は${revenuePercent}%と、カレンダーの進捗を上回る非常に良いペースです。目標達成の可能性が高いでしょう。🚀✨`;
-    } else {
-      text += `売上達成率は${revenuePercent}%で、目標に対してやや遅れが見られます。後半の巻き返しに期待しましょう。💪`;
-    }
-
-    if (topMember && topMember.completedAmount > 0) {
-      text += `\n\n現在の貢献度トップは${topMember.member.name}さんです。チーム全体の売上の多くを牽引しています。`;
-    }
-
-    if (pointPercent > 80) {
-      text += `\nまた、ポイント達成率が${pointPercent}%を超えており、チームの質的な活動も非常に活発であると評価できます。🧚‍♀️`;
-    }
-
-    return text;
-  }, [summary, memberStats]);
-
-  return (
-    <div className="card p-6 bg-gradient-to-br from-blue-500/10 to-transparent border-blue-500/20 relative overflow-hidden">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-glow">
-          <MessageSquare className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h3 className="text-sm font-black text-dark-100">見習いアナリストの現状分析</h3>
-          <p className="text-[10px] text-dark-400 font-bold uppercase tracking-widest">Progress Audit</p>
-        </div>
-      </div>
-      <p className="text-sm text-dark-200 leading-relaxed whitespace-pre-wrap font-medium relative z-10">
-        {insight}
-      </p>
-      <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl" />
-    </div>
-  );
-}
+// ... (定義を他ファイルへ移動)
 
 // v1.56: 月ちゃん（猫）の応援メッセージ
 const TSUKI_MESSAGES = [
@@ -204,31 +159,7 @@ const TSUKI_MESSAGES = [
   "明日もまた新しいチャンスがいっぱいニャ！ゆっくり休んで、元気に起きようニャ。おやすみニャ🌙💤"
 ];
 
-function TsukiComment() {
-  const message = useMemo(() => {
-    const day = getNowJST().getDate();
-    return TSUKI_MESSAGES[(day - 1) % TSUKI_MESSAGES.length];
-  }, []);
-
-  return (
-    <div className="card p-6 bg-gradient-to-br from-orange-500/10 to-transparent border-orange-500/20 relative overflow-hidden">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center shadow-glow border-2 border-white/20">
-          <Cat className="w-5 h-5 text-white fill-white" />
-        </div>
-        <div>
-          <h3 className="text-sm font-black text-dark-100">看板猫・ツキちゃんの応援！</h3>
-          <p className="text-[10px] text-dark-400 font-bold uppercase tracking-widest">Tsuki's Cheer</p>
-        </div>
-      </div>
-      <p className="text-sm text-dark-200 leading-relaxed font-bold italic relative z-10">
-        「{message}」
-      </p>
-      <div className="absolute -top-4 -right-4 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl" />
-      <Sparkles className="absolute bottom-2 right-2 w-8 h-8 text-orange-500/20" />
-    </div>
-  );
-}
+// ... (定義を他ファイルへ移動)
 
 // v1.54: 本日のビジネスコラム
 const BUSINESS_COLUMNS = [
@@ -264,25 +195,6 @@ const BUSINESS_COLUMNS = [
   "自分の限界を知ることもプロの仕事です。無理な時は早めに周囲にアラートを出しましょう。🔔",
   "「今日も一日お疲れ様でした！」と自分に言う習慣が、明日への活力になります。🌟"
 ];
-
-function BusinessColumn() {
-  const column = useMemo(() => {
-    const day = getNowJST().getDate();
-    return BUSINESS_COLUMNS[(day - 1) % BUSINESS_COLUMNS.length];
-  }, []);
-
-  return (
-    <div className="card p-5 border-dashed border-dark-600 bg-dark-800/30">
-      <div className="flex items-center gap-2 mb-3">
-        <Lightbulb className="w-4 h-4 text-accent-warning" />
-        <h4 className="text-[10px] font-black text-dark-400 uppercase tracking-widest">本日のビジネス Tips</h4>
-      </div>
-      <p className="text-xs text-dark-300 font-medium leading-relaxed italic">
-        「{column}」
-      </p>
-    </div>
-  );
-}
 
 // 月間完了集計カード
 function MonthlyCompletionCard({ count, totalAmount }: { count: number; totalAmount: number; }) {
@@ -559,14 +471,12 @@ export function Dashboard() {
 
       <RecentActivity tasks={filteredSummary.recentActivities} />
 
-      {/* v1.57: 分析・応援・Tipsの三段構成 */}
+      {/* v1.58: ビジネスTipsのみ表示（アナリストとツキちゃんは他ページへ移動） */}
       <div className="space-y-6 pt-4 border-t border-dark-700/50">
-        <AnalystInsight summary={summary} memberStats={memberStats} />
-        <TsukiComment />
         <BusinessColumn />
       </div>
 
-      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.57-FINAL</span></div>
+      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.58</span></div>
     </div>
   );
 }

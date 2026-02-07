@@ -10,9 +10,10 @@ import {
   ArrowDownRight, Zap
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { formatCurrency, formatNumber, getCurrentMonth, getNowJST } from '@/lib/utils';
-import type { Task, Member, MonthlyGoal } from '@/lib/types';
+import { formatCurrency, formatNumber, getCurrentMonth, getNowJST, calculatePercentage } from '@/lib/utils';
+import type { Task, Member, MonthlyGoal, DashboardSummary, MemberStats } from '@/lib/types';
 import { ErrorDisplay } from './ErrorBoundary';
+import { AnalystInsight } from './AnalystInsight';
 
 export function AnalyticsView() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -114,6 +115,53 @@ export function AnalyticsView() {
     const growth = lastMonthRevenue > 0 ? ((totalRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 : 0;
     return { thisMonthRevenue: totalRevenue / 1000, avgTaskPrice: (thisMonthTasks.length > 0 ? totalRevenue / thisMonthTasks.length : 0) / 1000, growth, completedCount: thisMonthTasks.length };
   }, [tasks]);
+
+  // AnalystInsight 用のデータ計算
+  const insightData = useMemo(() => {
+    const currentMonth = getCurrentMonth();
+    const currentGoal = goals.find(g => g.month === currentMonth);
+    const startOfMonth = `${currentMonth}-01`;
+    const [y, m] = currentMonth.split('-').map(Number);
+    const lastDay = new Date(y, m, 0).getDate();
+    const endOfMonth = `${currentMonth}-${String(lastDay).padStart(2, '0')}`;
+
+    const monthTasks = tasks.filter(t => {
+      const start = t.start_date || t.scheduled_date;
+      const end = t.end_date || t.scheduled_date;
+      if (!start || !end) return false;
+      return start <= endOfMonth && end >= startOfMonth;
+    });
+
+    const completed = monthTasks.filter(t => t.status === 'completed');
+    const pending = monthTasks.filter(t => t.status === 'pending');
+
+    const summary: DashboardSummary = {
+      completedAmount: completed.reduce((sum, t) => sum + (t.amount || 0), 0),
+      pendingAmount: pending.reduce((sum, t) => sum + (t.amount || 0), 0),
+      completedPoints: completed.reduce((sum, t) => sum + (t.points || 0), 0),
+      pendingPoints: pending.reduce((sum, t) => sum + (t.points || 0), 0),
+      targetAmount: currentGoal?.target_amount || 10000000,
+      targetPoints: currentGoal?.target_points || 1000,
+      recentActivities: [], // Insightでは使わない
+      monthlyCompletedCount: completed.length
+    };
+
+    const stats: MemberStats[] = members.map(member => {
+      const mTasks = monthTasks.filter(t => t.member_id === member.id);
+      const mCompleted = mTasks.filter(t => t.status === 'completed');
+      return {
+        member,
+        totalAmount: mTasks.reduce((s, t) => s + (t.amount || 0), 0),
+        completedAmount: mCompleted.reduce((s, t) => s + (t.amount || 0), 0),
+        totalPoints: mTasks.reduce((s, t) => s + (t.points || 0), 0),
+        completedPoints: mCompleted.reduce((s, t) => s + (t.points || 0), 0),
+        taskCount: mTasks.length,
+        completedTaskCount: mCompleted.length
+      };
+    });
+
+    return { summary, stats };
+  }, [tasks, goals, members]);
 
   if (loading) return <div className="p-20 text-center animate-pulse text-dark-400">データ分析中...</div>;
   if (error) return <ErrorDisplay message={error} onRetry={fetchData} />;
@@ -275,6 +323,11 @@ export function AnalyticsView() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* アナリストコーナー（一番下へ移動） */}
+      <div className="pt-6 border-t border-dark-700/50">
+        <AnalystInsight summary={insightData.summary} memberStats={insightData.stats} />
       </div>
     </div>
   );
