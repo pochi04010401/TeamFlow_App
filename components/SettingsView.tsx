@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Target, Save, Loader2, Calendar, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { getCurrentMonth, formatNumber } from '@/lib/utils';
+import { getCurrentMonth, formatNumber, getNowJST } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export function SettingsView() {
@@ -29,9 +29,11 @@ export function SettingsView() {
       if (error) throw error;
 
       if (data && data.length > 0) {
+        // v1.41: もし重複がある場合は最新の1件を表示
+        const latest = data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
         setGoalData({
-          target_amount: data[0].target_amount / 1000,
-          target_points: data[0].target_points
+          target_amount: latest.target_amount / 1000,
+          target_points: latest.target_points
         });
       } else {
         setGoalData({ target_amount: 10000, target_points: 1000 });
@@ -49,32 +51,33 @@ export function SettingsView() {
   }, [selectedMonth]);
 
   const handleSave = async () => {
+    if (loading) return;
     setLoading(true);
     try {
       const supabase = createClient();
       
-      const { data: existing } = await supabase
-        .from('monthly_goals')
-        .select('id')
-        .eq('month', selectedMonth);
-
+      // v1.41: 重複を許さないUPSERT戦略 (monthをキーにする)
+      // schema.sqlでmonthにUNIQUE制約があるため、upsertが最も安全
       const payload = {
         month: selectedMonth,
         target_amount: goalData.target_amount * 1000,
-        target_points: goalData.target_points
+        target_points: goalData.target_points,
+        updated_at: new Date().toISOString()
       };
 
-      if (existing && existing.length > 0) {
-        const { error } = await supabase
-          .from('monthly_goals')
-          .update(payload)
-          .eq('id', existing[0].id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('monthly_goals')
-          .insert([payload]);
-        if (error) throw error;
+      const { error } = await supabase
+        .from('monthly_goals')
+        .upsert(payload, { onConflict: 'month' });
+
+      if (error) {
+        // もしUNIQUE制約エラー(23505)が出る場合は、古いデータとの競合を避けるため一度消してから入れる
+        if (error.code === '23505' || error.code === '42P10') {
+          await supabase.from('monthly_goals').delete().eq('month', selectedMonth);
+          const { error: retryError } = await supabase.from('monthly_goals').insert([payload]);
+          if (retryError) throw retryError;
+        } else {
+          throw error;
+        }
       }
 
       toast.success(`${selectedMonth}の目標を保存しました！`);
@@ -82,11 +85,7 @@ export function SettingsView() {
       await fetchGoal(selectedMonth);
     } catch (err) {
       console.error('Settings save error:', err);
-      const errorMessage = err instanceof Error ? err.message : '保存に失敗しました';
-      const errorCode = (err as any)?.code || 'UNKNOWN';
-      toast.error(`保存に失敗しました (${errorCode})`, {
-        description: errorMessage,
-      });
+      toast.error(`保存に失敗しました: ${err instanceof Error ? err.message : '不明なエラー'}`);
     } finally {
       setLoading(false);
     }
