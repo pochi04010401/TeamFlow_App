@@ -10,13 +10,10 @@ import {
   Loader2, 
   ChevronDown, 
   FileText, 
-  Coins, 
-  Clock,
-  ArrowRight,
   Check
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { getCurrentDate, formatNumber, getContrastColor } from '@/lib/utils';
+import { getCurrentDate, getContrastColor } from '@/lib/utils';
 import type { Member, TaskFormData } from '@/lib/types';
 import { toast } from 'sonner';
 
@@ -34,7 +31,6 @@ export function TaskForm({ members }: { members: Member[] }) {
     notes: ''
   });
 
-  // 常に今日の日付をデフォルトにする
   useEffect(() => {
     const today = getCurrentDate();
     setFormData(prev => ({
@@ -52,7 +48,6 @@ export function TaskForm({ members }: { members: Member[] }) {
 
     try {
       const supabase = createClient();
-      
       if (formData.end_date < formData.start_date) {
         toast.error('終了日は開始日以降の日付にしてください');
         setLoading(false);
@@ -74,17 +69,7 @@ export function TaskForm({ members }: { members: Member[] }) {
         }]);
 
       if (error) throw error;
-
       toast.success('タスクを登録しました！');
-      
-      setFormData({
-        ...formData,
-        title: '',
-        amountStr: '',
-        points: 0,
-        notes: ''
-      });
-
       router.push('/');
       router.refresh();
     } catch (err) {
@@ -95,11 +80,8 @@ export function TaskForm({ members }: { members: Member[] }) {
     }
   };
 
-  const selectedMember = members.find(m => m.id === formData.member_id);
-
   return (
     <div className="animate-fade-in pb-12 px-4 max-w-lg mx-auto">
-      {/* ヒーローセクション */}
       <div className="relative py-8 text-center overflow-hidden rounded-3xl mb-8 bg-gradient-to-br from-accent-primary/20 to-transparent border border-accent-primary/10">
         <div className="relative z-10">
           <div className="w-16 h-16 bg-accent-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-glow">
@@ -112,14 +94,12 @@ export function TaskForm({ members }: { members: Member[] }) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        
-        {/* セクション1: 基本情報 */}
+        {/* 基本情報 */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-2 ml-1">
             <div className="w-1.5 h-4 bg-accent-primary rounded-full" />
             <h2 className="text-xs font-black text-dark-300 uppercase tracking-widest">基本情報</h2>
           </div>
-          
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-dark-500 uppercase ml-1">案件タイトル</label>
             <input
@@ -128,18 +108,17 @@ export function TaskForm({ members }: { members: Member[] }) {
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               placeholder="例: プロジェクトA 打ち合わせ"
-              className="w-full bg-dark-800 border-2 border-dark-700 rounded-2xl px-6 py-4 text-dark-100 font-bold focus:border-accent-primary transition-all outline-none text-lg placeholder:text-dark-600"
+              className="w-full bg-dark-800 border-2 border-dark-700 rounded-2xl px-6 py-4 text-dark-100 font-bold focus:border-accent-primary transition-all outline-none text-lg"
             />
           </div>
         </div>
 
-        {/* セクション2: 担当者選択 (リッチピッカー) */}
+        {/* 担当者 */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-2 ml-1">
             <div className="w-1.5 h-4 bg-accent-secondary rounded-full" />
             <h2 className="text-xs font-black text-dark-300 uppercase tracking-widest">担当メンバー</h2>
           </div>
-          
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {members.map((member) => {
               const isSelected = formData.member_id === member.id;
@@ -148,105 +127,98 @@ export function TaskForm({ members }: { members: Member[] }) {
                   key={member.id}
                   type="button"
                   onClick={() => setFormData({ ...formData, member_id: member.id })}
-                  className={`relative flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${
-                    isSelected 
-                      ? 'border-accent-primary bg-accent-primary/10' 
-                      : 'border-dark-700 bg-dark-800 hover:border-dark-600'
-                  }`}
+                  className={`relative flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${isSelected ? 'border-accent-primary bg-accent-primary/10' : 'border-dark-700 bg-dark-800 hover:border-dark-600'}`}
                 >
-                  <div 
-                    className="w-10 h-10 rounded-full flex items-center justify-center shadow-sm"
-                    style={{ backgroundColor: member.color }}
-                  >
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center shadow-sm" style={{ backgroundColor: member.color }}>
                     {isSelected && <Check className="w-5 h-5" style={{ color: getContrastColor(member.color) }} />}
                   </div>
-                  <span className={`text-[10px] font-black truncate w-full text-center ${isSelected ? 'text-dark-100' : 'text-dark-400'}`}>
-                    {member.name}
-                  </span>
+                  <span className={`text-[10px] font-black truncate w-full text-center ${isSelected ? 'text-dark-100' : 'text-dark-400'}`}>{member.name}</span>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* セクション3: 数値・スコア */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {/* 売上 & ポイント */}
+        <div className="space-y-6">
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-2 ml-1">
               <div className="w-1.5 h-4 bg-accent-success rounded-full" />
-              <h2 className="text-xs font-black text-dark-300 uppercase tracking-widest">売上予定</h2>
+              <h2 className="text-xs font-black text-dark-300 uppercase tracking-widest">売上とポイント</h2>
             </div>
-            <div className="relative group">
-              <input
-                type="number"
-                inputMode="numeric"
-                value={formData.amountStr}
-                onChange={(e) => setFormData({ ...formData, amountStr: e.target.value })}
-                placeholder="0"
-                className="w-full bg-dark-800 border-2 border-dark-700 rounded-2xl pl-6 pr-16 py-4 text-dark-100 font-black text-xl focus:border-accent-success transition-all outline-none"
-              />
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 px-3 py-1 bg-dark-700 rounded-lg text-[10px] font-black text-dark-400 border border-dark-600">
-                千円
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-dark-500 uppercase ml-1">売上予定</label>
+                <div className="relative flex items-center gap-3">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={formData.amountStr}
+                    onChange={(e) => setFormData({ ...formData, amountStr: e.target.value })}
+                    placeholder="0"
+                    className="flex-1 bg-dark-800 border-2 border-dark-700 rounded-2xl px-6 py-4 text-dark-100 font-black text-xl focus:border-accent-success outline-none"
+                  />
+                  <span className="text-sm font-bold text-dark-400 flex-shrink-0 bg-dark-700 px-4 py-4 rounded-xl border border-dark-600">千円</span>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-2 ml-1">
-              <div className="w-1.5 h-4 bg-accent-warning rounded-full" />
-              <h2 className="text-xs font-black text-dark-300 uppercase tracking-widest">ポイント</h2>
-            </div>
-            <div className="relative">
-              <select
-                required
-                value={formData.points}
-                onChange={(e) => setFormData({ ...formData, points: Number(e.target.value) })}
-                className="w-full bg-dark-800 border-2 border-dark-700 rounded-2xl pl-12 pr-6 py-4 text-dark-100 font-black text-xl focus:border-accent-warning transition-all outline-none appearance-none"
-              >
-                {[0, 10, 20, 30, 40, 50].map((pt) => (
-                  <option key={pt} value={pt}>{pt} pt</option>
-                ))}
-              </select>
-              <Zap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-accent-warning" />
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 pointer-events-none" />
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-dark-500 uppercase ml-1">獲得ポイント</label>
+                <div className="relative">
+                  <select
+                    required
+                    value={formData.points}
+                    onChange={(e) => setFormData({ ...formData, points: Number(e.target.value) })}
+                    className="w-full bg-dark-800 border-2 border-dark-700 rounded-2xl pl-12 pr-6 py-4 text-dark-100 font-black text-xl focus:border-accent-warning outline-none appearance-none"
+                  >
+                    {[0, 10, 20, 30, 40, 50].map((pt) => <option key={pt} value={pt}>{pt} pt</option>)}
+                  </select>
+                  <Zap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-accent-warning" />
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 pointer-events-none" />
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* セクション4: 期間 */}
+        {/* スケジュール (v1.35修正) */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-2 ml-1">
             <div className="w-1.5 h-4 bg-blue-500 rounded-full" />
             <h2 className="text-xs font-black text-dark-300 uppercase tracking-widest">スケジュール</h2>
           </div>
-          
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="relative w-full">
-              <input
-                type="date"
-                required
-                value={formData.start_date}
-                onChange={(e) => setFormData({ ...formData, start_date: e.target.value, end_date: e.target.value > formData.end_date ? e.target.value : formData.end_date })}
-                className="w-full bg-dark-800 border-2 border-dark-700 rounded-2xl px-6 py-4 text-dark-100 font-bold focus:border-blue-500 transition-all outline-none"
-              />
-              <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-500 pointer-events-none" />
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-dark-500 uppercase ml-1">開始日</label>
+              <div className="relative">
+                <input
+                  type="date"
+                  required
+                  value={formData.start_date}
+                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value, end_date: e.target.value > formData.end_date ? e.target.value : formData.end_date })}
+                  className="w-full bg-dark-800 border-2 border-dark-700 rounded-2xl px-6 py-4 text-dark-100 font-bold focus:border-blue-500 outline-none"
+                />
+                <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 pointer-events-none" />
+              </div>
             </div>
-            <ArrowRight className="w-5 h-5 text-dark-600 hidden sm:block" />
-            <div className="relative w-full">
-              <input
-                type="date"
-                required
-                value={formData.end_date}
-                min={formData.start_date}
-                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                className="w-full bg-dark-800 border-2 border-dark-700 rounded-2xl px-6 py-4 text-dark-100 font-bold focus:border-blue-500 transition-all outline-none"
-              />
-              <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-500 pointer-events-none" />
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-dark-500 uppercase ml-1">終了日</label>
+              <div className="relative">
+                <input
+                  type="date"
+                  required
+                  value={formData.end_date}
+                  min={formData.start_date}
+                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                  className="w-full bg-dark-800 border-2 border-dark-700 rounded-2xl px-6 py-4 text-dark-100 font-bold focus:border-blue-500 outline-none"
+                />
+                <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 pointer-events-none" />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* セクション5: メモ */}
+        {/* メモ */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-2 ml-1">
             <div className="w-1.5 h-4 bg-dark-400 rounded-full" />
@@ -256,27 +228,14 @@ export function TaskForm({ members }: { members: Member[] }) {
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="作業の補足や共有事項など..."
-              className="w-full bg-dark-800 border-2 border-dark-700 rounded-2xl px-6 py-4 min-h-[120px] text-dark-100 font-medium focus:border-dark-500 transition-all outline-none resize-none placeholder:text-dark-600"
+              placeholder="備考や詳細内容など..."
+              className="w-full bg-dark-800 border-2 border-dark-700 rounded-2xl px-6 py-4 min-h-[120px] text-dark-100 font-medium focus:border-dark-500 outline-none resize-none"
             />
-            <FileText className="absolute right-4 bottom-4 w-5 h-5 text-dark-700 pointer-events-none" />
           </div>
         </div>
 
-        {/* 登録ボタン */}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full h-20 bg-gradient-premium rounded-3xl text-white font-black text-xl shadow-glow hover:scale-[0.98] active:scale-95 transition-all flex items-center justify-center gap-4 disabled:opacity-50"
-        >
-          {loading ? (
-            <Loader2 className="w-8 h-8 animate-spin" />
-          ) : (
-            <>
-              タスクを登録
-              <PlusCircle className="w-6 h-6" />
-            </>
-          )}
+        <button type="submit" disabled={loading} className="w-full h-20 bg-gradient-premium rounded-3xl text-white font-black text-xl shadow-glow active:scale-95 transition-all flex items-center justify-center gap-4 disabled:opacity-50">
+          {loading ? <Loader2 className="w-8 h-8 animate-spin" /> : <>タスクを登録<PlusCircle className="w-6 h-6" /></>}
         </button>
       </form>
     </div>
