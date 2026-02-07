@@ -18,6 +18,7 @@ import { createClient } from '@/lib/supabase/client';
 import { getContrastColor, formatNumber } from '@/lib/utils';
 import type { Member, CalendarTask } from '@/lib/types';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 export function TaskEditModal({ 
   task, 
@@ -30,6 +31,7 @@ export function TaskEditModal({
   onClose: () => void;
   onUpdate: () => void;
 }) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: task.title,
@@ -68,6 +70,7 @@ export function TaskEditModal({
       onUpdate();
       onClose();
     } catch (err) {
+      console.error('Update error:', err);
       toast.error('更新に失敗しました');
     } finally {
       setLoading(false);
@@ -79,12 +82,28 @@ export function TaskEditModal({
     setLoading(true);
     try {
       const supabase = createClient();
-      await supabase.from('tasks').delete().eq('id', task.id);
+      
+      // v1.47: 確実に削除し、エラーをキャッチする
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', task.id);
+
+      if (error) throw error;
+
       toast.success('削除しました');
+      
+      // 親コンポーネントの状態を更新
       onUpdate();
+      
+      // v1.47: キャッシュを破棄するためにNext.jsのルーターもリフレッシュ
+      router.refresh();
+      
       onClose();
     } catch (err) {
-      toast.error('削除に失敗しました');
+      console.error('Delete error:', err);
+      const message = err instanceof Error ? err.message : '削除に失敗しました';
+      toast.error(`削除に失敗しました: ${message}`);
     } finally {
       setLoading(false);
     }
