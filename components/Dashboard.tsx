@@ -48,7 +48,7 @@ function RankingPeriodToggle({
   );
 }
 
-// メーターコンポーネント
+// メーターコンポーネント (v1.44: 目標を左上に、数値をクッキリ表示)
 function Meter({ 
   label, 
   completed, 
@@ -75,33 +75,43 @@ function Meter({
   }, [isGoalReached]);
 
   return (
-    <div className={`card p-5 transition-all duration-500 ${isGoalReached ? 'border-accent-warning shadow-glow-sm' : ''}`}>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <h3 className="font-medium text-dark-200">{label} {label === '売上' && '(千円)'}</h3>
-          {isGoalReached && <Crown className="w-4 h-4 text-accent-warning animate-bounce" />}
+    <div className={`card p-5 transition-all duration-500 ${isGoalReached ? 'border-accent-warning shadow-glow-sm bg-accent-warning/5' : ''}`}>
+      <div className="flex items-start justify-between mb-3">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <h3 className="text-[10px] font-black text-dark-400 uppercase tracking-widest">{label} {label === '売上' && '(千円)'}</h3>
+            {isGoalReached && <Crown className="w-4 h-4 text-accent-warning animate-bounce" />}
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-[10px] font-black text-dark-500">目標:</span>
+            <span className="text-xl font-black text-dark-100 tracking-tight">{formatValue(target)}</span>
+          </div>
         </div>
-        <div className="text-right flex items-center gap-1">
-          {isGoalReached && <Sparkles className="w-4 h-4 text-accent-warning animate-pulse" />}
-          <span className={`text-2xl font-black ${isGoalReached ? 'text-accent-warning' : 'text-dark-100'}`}>
-            {completedPercent}
-          </span>
-          <span className="text-xs font-bold text-dark-500 ml-0.5">%</span>
+        <div className="text-right">
+          <div className="flex items-center justify-end gap-1">
+            {isGoalReached && <Sparkles className="w-4 h-4 text-accent-warning animate-pulse" />}
+            <span className={`text-3xl font-black leading-none ${isGoalReached ? 'text-accent-warning' : 'text-dark-100'}`}>
+              {completedPercent}
+            </span>
+            <span className="text-xs font-black text-dark-500">%</span>
+          </div>
+          <p className="text-[9px] font-bold text-dark-500 uppercase tracking-tighter mt-1">達成率</p>
         </div>
       </div>
-      <div className="relative h-4 bg-dark-700 rounded-full overflow-hidden mb-3">
-        <div className="absolute top-0 left-0 h-full meter-pending transition-all duration-700 ease-out opacity-60" style={{ width: `${Math.min(pendingPercent, 100)}%` }} />
-        <div className={`absolute top-0 left-0 h-full transition-all duration-1000 ease-out ${isGoalReached ? 'bg-gradient-to-r from-accent-warning to-yellow-300' : 'meter-completed'}`} style={{ width: `${Math.min(completedPercent, 100)}%` }} />
+
+      <div className="relative h-5 bg-dark-700 rounded-full overflow-hidden mb-4 border border-white/5 shadow-inner-dark">
+        <div className="absolute top-0 left-0 h-full meter-pending transition-all duration-700 ease-out opacity-40" style={{ width: `${Math.min(pendingPercent, 100)}%` }} />
+        <div className={`absolute top-0 left-0 h-full transition-all duration-1000 ease-out ${isGoalReached ? 'bg-gradient-to-r from-accent-warning to-yellow-300' : 'meter-completed shadow-glow-sm'}`} style={{ width: `${Math.min(completedPercent, 100)}%` }} />
       </div>
-      <div className="flex justify-between text-sm">
-        <div>
-          <span className="text-accent-success font-medium">{formatValue(completed)}</span>
-          <span className="text-dark-500 ml-1">確定</span>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col">
+          <span className="text-[9px] font-bold text-dark-500 uppercase tracking-widest mb-0.5">確定</span>
+          <span className="text-sm font-black text-accent-success">{formatValue(completed)}</span>
         </div>
-        <div className="text-xs text-dark-500 italic opacity-50">目標: {formatValue(target)}</div>
-        <div>
-          <span className="text-accent-warning font-medium">{formatValue(pending)}</span>
-          <span className="text-dark-500 ml-1">見込み</span>
+        <div className="flex flex-col text-right border-l border-dark-700 pl-4">
+          <span className="text-[9px] font-bold text-dark-500 uppercase tracking-widest mb-0.5">見込み込</span>
+          <span className="text-sm font-black text-accent-warning">{formatValue(completed + pending)}</span>
         </div>
       </div>
     </div>
@@ -262,8 +272,7 @@ export function Dashboard() {
       const lastDay = new Date(y, m, 0).getDate();
       const endOfMonth = `${currentMonth}-${String(lastDay).padStart(2, '0')}`;
       
-      // タスクの取得 (重複を避けるため、ロジックを簡素化)
-      // ステータスが完了のものは、完了日が今月のもの。進行中のものは、期間が今月にかかっているもの。
+      // タスクの取得
       const { data: tasks, error: tasksError } = await supabase
         .from('tasks')
         .select('*, member:members(*)')
@@ -284,7 +293,6 @@ export function Dashboard() {
         const start = t.start_date || t.scheduled_date;
         const end = t.end_date || t.scheduled_date;
         if (!start || !end) return false;
-        // 期間が今月に重なっているか
         return start <= endOfMonth && end >= startOfMonth;
       });
 
@@ -359,7 +367,7 @@ export function Dashboard() {
       )}
 
       <RecentActivity tasks={filteredSummary.recentActivities} />
-      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.43</span></div>
+      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.44</span></div>
     </div>
   );
 }
