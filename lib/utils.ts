@@ -7,33 +7,35 @@ export function cn(...inputs: ClassValue[]) {
 
 // 現在の時刻を日本標準時（JST）で取得
 export function getNowJST(): Date {
+  // サーバー・クライアント両方で確実にJSTを取得
   const now = new Date();
-  return new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+  const jstOffset = 9 * 60; // JSTはUTC+9
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  return new Date(utc + (jstOffset * 60000));
 }
 
-// 日付を YYYY-MM-DD 形式にフォーマット
+// 日付を YYYY-MM-DD 形式にフォーマット (JST基準)
 export function formatDate(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  // JSTに変換して取得
-  const jstDate = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
-  const year = jstDate.getFullYear();
-  const month = String(jstDate.getMonth() + 1).padStart(2, '0');
-  const day = String(jstDate.getDate()).padStart(2, '0');
+  // 引数のdateが既にJSTかもしれないしUTCかもしれないので、一旦UTCに戻してからJSTに変換
+  const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+  const jst = new Date(utc + (9 * 60 * 60000));
+  
+  const year = jst.getFullYear();
+  const month = String(jst.getMonth() + 1).padStart(2, '0');
+  const day = String(jst.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
 // 日付を日本語形式にフォーマット
 export function formatDateJP(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  return new Intl.DateTimeFormat('ja-JP', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    timeZone: 'Asia/Tokyo',
-  }).format(d);
+  const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+  const jst = new Date(utc + (9 * 60 * 60000));
+  return `${jst.getFullYear()}年${jst.getMonth() + 1}月${jst.getDate()}日`;
 }
 
-// 月を YYYY-MM 形式で取得
+// 月を YYYY-MM 形式で取得 (JST基準)
 export function getCurrentMonth(): string {
   const now = getNowJST();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;

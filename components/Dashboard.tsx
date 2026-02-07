@@ -314,8 +314,8 @@ export function Dashboard() {
       )}
 
       <RecentActivity tasks={filteredSummary.recentActivities} />
-      {/* バージョン表示 (v1.29) */}
-      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.29</span></div>
+      {/* バージョン表示 (v1.30) */}
+      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.30</span></div>
     </div>
   );
 }
