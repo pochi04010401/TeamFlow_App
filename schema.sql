@@ -27,7 +27,7 @@ CREATE TABLE tasks (
   amount BIGINT DEFAULT 0,
   points INTEGER DEFAULT 0,
   member_id UUID REFERENCES members(id) ON DELETE CASCADE,
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'cancelled')),
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'cancelled', 'deleted')),
   start_date DATE NOT NULL,           -- v1.1: 開始日
   end_date DATE NOT NULL,             -- v1.1: 終了日
   scheduled_date DATE,                -- 後方互換性のため残す

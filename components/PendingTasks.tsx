@@ -80,7 +80,7 @@ export function PendingTasks() {
         .order('end_date', { ascending: true, nullsFirst: false })
         .order('start_date', { ascending: true, nullsFirst: false });
       
-      const { data, error: fetchError } = await query.in('status', ['pending', 'completed']);
+      const { data, error: fetchError } = await query.in('status', ['pending', 'completed', 'cancelled']);
 
       if (fetchError) throw fetchError;
 

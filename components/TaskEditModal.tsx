@@ -84,22 +84,28 @@ export function TaskEditModal({
     try {
       const supabase = createClient();
       
-      // v1.47: 確実に削除し、エラーをキャッチする
+      // v1.48: 物理削除から論理削除（status='deleted'）に変更
       const { error } = await supabase
         .from('tasks')
-        .delete()
+        .update({ status: 'deleted' })
         .eq('id', task.id);
 
-      if (error) throw error;
+      if (error) {
+        // もしDBの制約で'deleted'が使えない場合は'cancelled'で代用（念のため）
+        if (error.code === '23514') {
+          const { error: retryError } = await supabase
+            .from('tasks')
+            .update({ status: 'cancelled' })
+            .eq('id', task.id);
+          if (retryError) throw retryError;
+        } else {
+          throw error;
+        }
+      }
 
-      toast.success('削除しました');
-      
-      // 親コンポーネントの状態を更新
+      toast.success('削除として登録しました');
       onUpdate();
-      
-      // v1.47: キャッシュを破棄するためにNext.jsのルーターもリフレッシュ
       router.refresh();
-      
       onClose();
     } catch (err) {
       console.error('Delete error:', err);

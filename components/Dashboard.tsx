@@ -299,25 +299,26 @@ export function Dashboard() {
       const lastDay = new Date(y, m, 0).getDate();
       const endOfMonth = `${currentMonth}-${String(lastDay).padStart(2, '0')}`;
       
-      // タスクの取得 (集計用はキャンセル以外)
+      // タスクの取得 (集計用は進行中・完了のみ)
       const { data: tasks, error: tasksError } = await supabase
         .from('tasks')
         .select('*, member:members(*)')
-        .neq('status', 'cancelled')
+        .in('status', ['pending', 'completed'])
         .or(`start_date.lte.${endOfMonth},scheduled_date.lte.${endOfMonth}`)
         .or(`end_date.gte.${startOfMonth},scheduled_date.gte.${startOfMonth}`);
       
       if (tasksError) throw tasksError;
 
-      // 全タスク取得 (CSV出力用：キャンセル含む全期間)
+      // 全タスク取得 (CSV出力用：削除以外)
       const { data: rawAllTasks } = await supabase
         .from('tasks')
         .select('*, member:members(*)')
+        .neq('status', 'deleted')
         .order('created_at', { ascending: false });
 
       // 年間ランキング用
       const { data: yearlyTasks } = await supabase.from('tasks').select('*, member:members(*)').gte('completed_at', `${currentYear}-01-01`).lte('completed_at', `${currentYear}-12-31`).eq('status', 'completed');
-      const { data: recentTasks } = await supabase.from('tasks').select('*').neq('status', 'cancelled').order('completed_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(5);
+      const { data: recentTasks } = await supabase.from('tasks').select('*').in('status', ['pending', 'completed']).order('completed_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(5);
       const { data: membersData } = await supabase.from('members').select('*').order('created_at');
       
       // 今月分に絞り込み
@@ -399,7 +400,7 @@ export function Dashboard() {
       )}
 
       <RecentActivity tasks={filteredSummary.recentActivities} />
-      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.47</span></div>
+      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.48</span></div>
     </div>
   );
 }

@@ -48,7 +48,7 @@ export function TeamCalendar() {
         .select('*, member:members(*)')
         .lte('start_date', endOfMonth)
         .gte('end_date', startOfMonth)
-        .neq('status', 'completed');
+        .in('status', ['pending', 'cancelled']); // 進行中とキャンセルを表示（完了は非表示）
 
       setMembers(membersData || []);
       setTasks(tasksData as CalendarTask[] || []);

@@ -174,9 +174,9 @@ export function LoginForm() {
           招待を受けたメールアドレスでのみアカウント作成できます。
         </p>
 
-        {/* バージョン表示 (v1.47) */}
+        {/* バージョン表示 (v1.48) */}
         <div className="flex justify-center mt-8 opacity-20">
-          <span className="text-[10px] font-mono text-dark-500">TeamFlow v1.47</span>
+          <span className="text-[10px] font-mono text-dark-500">TeamFlow v1.48</span>
         </div>
       </div>
     </div>

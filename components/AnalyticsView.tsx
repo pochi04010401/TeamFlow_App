@@ -27,7 +27,7 @@ export function AnalyticsView() {
     try {
       const supabase = createClient();
       const { data: membersData } = await supabase.from('members').select('*');
-      const { data: tasksData } = await supabase.from('tasks').select('*, member:members(*)').neq('status', 'cancelled');
+      const { data: tasksData } = await supabase.from('tasks').select('*, member:members(*)').in('status', ['pending', 'completed']);
       const { data: goalsData } = await supabase.from('monthly_goals').select('*').order('month', { ascending: false });
       setMembers(membersData || []);
       setTasks(tasksData as Task[] || []);
