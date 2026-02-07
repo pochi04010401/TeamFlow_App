@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, Settings, LogOut, BarChart2 } from 'lucide-react';
+import { Menu, X, Settings, LogOut, BarChart2, Target } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 export function Header() {
@@ -70,6 +70,7 @@ export function Header() {
               <span className="font-bold">チーム分析</span>
             </Link>
 
+// 目標管理をここに追加 (v1.24)
             <Link 
               href="/settings" 
               onClick={() => setIsOpen(false)}
@@ -77,8 +78,8 @@ export function Header() {
                 pathname === '/settings' ? 'bg-accent-primary/20 text-accent-primary' : 'hover:bg-dark-700 text-dark-200'
               }`}
             >
-              <Settings className="w-5 h-5" />
-              <span className="font-bold">アプリ設定</span>
+              <Target className="w-5 h-5" />
+              <span className="font-bold">目標管理</span>
             </Link>
           </div>
 

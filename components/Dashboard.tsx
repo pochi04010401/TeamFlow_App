@@ -300,8 +300,9 @@ export function Dashboard() {
         </div>
       )}
 
+      {/* 最近のアクティビティ */}
       <RecentActivity tasks={filteredSummary.recentActivities} />
-      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.24</span></div>
+      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.25</span></div>
     </div>
   );
 }
