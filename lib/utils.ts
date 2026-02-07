@@ -50,10 +50,10 @@ export function formatNumber(num: number): string {
   return new Intl.NumberFormat('ja-JP').format(num);
 }
 
-// パーセンテージを計算
+// パーセンテージを計算 (v1.28: 100%超えを許可)
 export function calculatePercentage(value: number, total: number): number {
   if (total === 0) return 0;
-  return Math.min(Math.round((value / total) * 100), 100);
+  return Math.round((value / total) * 100);
 }
 
 // 日付の配列を生成（今月の日付）

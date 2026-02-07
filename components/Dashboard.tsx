@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { TrendingUp, Zap, Activity, CheckCircle2, Trophy, Download, Calendar } from 'lucide-react';
+import { TrendingUp, Zap, Activity, CheckCircle2, Trophy, Download, Calendar, Crown, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { 
   formatCurrency, 
@@ -9,7 +9,8 @@ import {
   calculatePercentage, 
   getCurrentMonth,
   formatDateJP,
-  exportTasksToCSV
+  exportTasksToCSV,
+  fireConfetti
 } from '@/lib/utils';
 import type { Task, DashboardSummary, MemberStats, Member, RankingPeriod } from '@/lib/types';
 import { ErrorDisplay } from './ErrorBoundary';
@@ -46,7 +47,7 @@ function RankingPeriodToggle({
   );
 }
 
-// メーターコンポーネント
+// メーターコンポーネント (v1.28: 100%超え対応 & 特別演出)
 function Meter({ 
   label, 
   completed, 
@@ -64,21 +65,33 @@ function Meter({
 }) {
   const completedPercent = calculatePercentage(completed, target);
   const pendingPercent = calculatePercentage(completed + pending, target);
+  const isGoalReached = completedPercent >= 100;
+
+  // 100%達成時に紙吹雪
+  useEffect(() => {
+    if (isGoalReached) {
+      fireConfetti();
+    }
+  }, [isGoalReached]);
+
   return (
-    <div className="card p-5">
+    <div className={`card p-5 transition-all duration-500 ${isGoalReached ? 'border-accent-warning shadow-glow-sm' : ''}`}>
       <div className="flex items-center justify-between mb-4">
-        <div>
+        <div className="flex items-center gap-2">
           <h3 className="font-medium text-dark-200">{label} {label === '売上' && '(千円)'}</h3>
-          <p className="text-sm text-dark-400">目標: {formatValue(target)}</p>
+          {isGoalReached && <Crown className="w-4 h-4 text-accent-warning animate-bounce" />}
         </div>
-        <div className="text-right">
-          <span className="text-2xl font-black text-dark-100">{completedPercent}</span>
-          <span className="text-xs font-bold text-dark-500 ml-1">%</span>
+        <div className="text-right flex items-center gap-1">
+          {isGoalReached && <Sparkles className="w-4 h-4 text-accent-warning animate-pulse" />}
+          <span className={`text-2xl font-black ${isGoalReached ? 'text-accent-warning' : 'text-dark-100'}`}>
+            {completedPercent}
+          </span>
+          <span className="text-xs font-bold text-dark-500 ml-0.5">%</span>
         </div>
       </div>
       <div className="relative h-4 bg-dark-700 rounded-full overflow-hidden mb-3">
-        <div className="absolute top-0 left-0 h-full meter-pending transition-all duration-700 ease-out opacity-60" style={{ width: `${pendingPercent}%` }} />
-        <div className="absolute top-0 left-0 h-full meter-completed transition-all duration-700 ease-out" style={{ width: `${completedPercent}%` }} />
+        <div className="absolute top-0 left-0 h-full meter-pending transition-all duration-700 ease-out opacity-60" style={{ width: `${Math.min(pendingPercent, 100)}%` }} />
+        <div className={`absolute top-0 left-0 h-full transition-all duration-1000 ease-out ${isGoalReached ? 'bg-gradient-to-r from-accent-warning to-yellow-300' : 'meter-completed'}`} style={{ width: `${Math.min(completedPercent, 100)}%` }} />
       </div>
       <div className="flex justify-between text-sm">
         <div>
@@ -299,9 +312,8 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* 最近のアクティビティ */}
       <RecentActivity tasks={filteredSummary.recentActivities} />
-      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.27</span></div>
+      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.28</span></div>
     </div>
   );
 }
