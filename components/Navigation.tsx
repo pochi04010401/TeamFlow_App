@@ -36,32 +36,28 @@ export function Navigation() {
     return null;
   }
 
-  const handleClearCache = () => {
-    if (!confirm('キャッシュを強制クリアして画面を再読み込みしますか？\n（ログイン情報の再入力が必要になる場合があります）')) return;
+  const handleAppRefresh = () => {
+    // v1.52: ログインセッション(localStorage)は維持しつつ、
+    // ブラウザのデータキャッシュ(SessionStorage)とメモリ上のキャッシュのみを破棄して強制リロード
     
-    // ストレージのクリア
-    localStorage.clear();
+    toast.info('アプリを最新の状態に更新しています...');
+    
+    // 進行中の状態などを一時クリア
     sessionStorage.clear();
     
-    // サービスワーカーの解除 (もしあれば)
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
-        for (const registration of registrations) {
-          registration.unregister();
-        }
-      });
-    }
-
-    toast.success('キャッシュをクリアしました。再起動します...');
-    
+    // 1秒後に、キャッシュを無視して完全にサーバーから読み込み直す
     setTimeout(() => {
-      window.location.href = '/'; // ルートに戻してリロード
-    }, 1000);
+      // ログイン情報を残すため localStorage.clear() は行わない
+      // window.location.reload(true) は非推奨だが、
+      // 確実に最新を取得するためにURLにタイムスタンプを付与してリダイレクト
+      const currentPath = window.location.pathname;
+      window.location.href = `${currentPath}?refresh=${Date.now()}`;
+    }, 800);
   };
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-dark-700/50">
-      {/* サブメニュー (v1.33+) */}
+      {/* サブメニュー */}
       <div 
         className={`absolute bottom-full right-4 mb-4 w-48 bg-dark-800 border border-dark-700 rounded-2xl shadow-2xl transition-all duration-300 transform ${
           showSubMenu ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-95 pointer-events-none'
@@ -84,13 +80,13 @@ export function Navigation() {
           
           <div className="my-1 border-t border-dark-700/50 mx-2" />
           
-          {/* 強制キャッシュクリア (v1.51) */}
+          {/* 強制アプリ更新 (v1.52) */}
           <button
-            onClick={handleClearCache}
-            className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-dark-400 hover:bg-accent-danger/10 hover:text-accent-danger"
+            onClick={handleAppRefresh}
+            className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-dark-400 hover:bg-accent-primary/10 hover:text-accent-primary"
           >
             <RefreshCcw className="w-5 h-5" />
-            <span className="text-sm font-bold">キャッシュクリア</span>
+            <span className="text-sm font-bold">アプリを更新</span>
           </button>
         </div>
       </div>
