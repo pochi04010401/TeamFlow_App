@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, Line, AreaChart, Area, ComposedChart
+  PieChart, Pie, Cell, Line, AreaChart, Area, ComposedChart, Legend
 } from 'recharts';
 import { 
   TrendingUp, Users, Target, Calendar, ArrowUpRight, 
@@ -42,26 +42,41 @@ export function AnalyticsView() {
 
   useEffect(() => { fetchData(); }, []);
 
+  // v1.50: メンバーごとのポイント内訳を含めるように拡張
   const monthlyData = useMemo(() => {
-    const data: { [key: string]: { monthKey: string; month: string; amount: number; target: number; points: number } } = {};
+    const data: { [key: string]: any } = {};
     const now = getNowJST();
     const monthsToShow = timeRange === '6months' ? 6 : timeRange === 'year' ? 12 : 24;
+    
     for (let i = monthsToShow - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const mStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      data[mStr] = { monthKey: mStr, month: mStr.split('-')[1] + '月', amount: 0, target: 0, points: 0 };
+      data[mStr] = { 
+        monthKey: mStr, 
+        month: mStr.split('-')[1] + '月', 
+        amount: 0, 
+        target: 0, 
+        totalPoints: 0 
+      };
+      // メンバーごとの初期値をセット
+      members.forEach(m => { data[mStr][m.id] = 0; });
     }
+
     goals.forEach(g => { if (data[g.month]) data[g.month].target = g.target_amount / 1000; });
+    
     tasks.filter(t => t.status === 'completed' && t.completed_at).forEach(t => {
       const date = new Date(t.completed_at!);
       const mStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       if (data[mStr]) {
         data[mStr].amount += (t.amount || 0) / 1000;
-        data[mStr].points += (t.points || 0);
+        data[mStr].totalPoints += (t.points || 0);
+        if (t.member_id) {
+          data[mStr][t.member_id] = (data[mStr][t.member_id] || 0) + (t.points || 0);
+        }
       }
     });
     return Object.values(data);
-  }, [tasks, goals, timeRange]);
+  }, [tasks, goals, members, timeRange]);
 
   const memberShareData = useMemo(() => {
     const data = members.map(m => {
@@ -72,6 +87,14 @@ export function AnalyticsView() {
     
     const total = data.reduce((sum, d) => sum + d.value, 0);
     return data.map(d => ({ ...d, percent: total > 0 ? (d.value / total) * 100 : 0 }));
+  }, [tasks, members]);
+
+  // ポイントランキング集計 (v1.50用)
+  const pointStats = useMemo(() => {
+    return members.map(m => {
+      const totalPoints = tasks.filter(t => t.member_id === m.id && t.status === 'completed').reduce((sum, t) => sum + (t.points || 0), 0);
+      return { name: m.name, points: totalPoints, color: m.color };
+    }).filter(d => d.points > 0).sort((a, b) => b.points - a.points);
   }, [tasks, members]);
 
   const stats = useMemo(() => {
@@ -140,7 +163,6 @@ export function AnalyticsView() {
         </div>
       </div>
 
-      {/* v1.43: 売上トレンド (目標 vs 実績を比較可能に) */}
       <div className="card p-5">
         <h3 className="text-sm font-bold text-dark-200 mb-6 flex items-center gap-2"><Calendar className="w-4 h-4 text-accent-secondary" />売上トレンド (目標 vs 実績)</h3>
         <div className="h-[280px] w-full">
@@ -212,18 +234,51 @@ export function AnalyticsView() {
         </div>
       </div>
 
+      {/* v1.50: 月次ポイント推移 (メンバーごとの積み上げに変更) */}
       <div className="card p-5">
-        <h3 className="text-sm font-bold text-dark-200 mb-6 flex items-center gap-2"><Zap className="w-4 h-4 text-accent-warning" />月次ポイント推移</h3>
-        <div className="h-[200px] w-full">
+        <h3 className="text-sm font-bold text-dark-200 mb-6 flex items-center gap-2"><Zap className="w-4 h-4 text-accent-warning" />月次ポイント推移 (メンバー別内訳)</h3>
+        <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
               <XAxis dataKey="month" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
               <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
-              <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '12px', fontSize: '12px' }} />
-              <Bar dataKey="points" name="ポイント" fill="#eab308" radius={[4, 4, 0, 0]} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '12px', fontSize: '12px' }}
+                itemSorter={(item) => -(item.value as number)}
+              />
+              <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '20px' }} />
+              {members.map((member) => (
+                <Bar 
+                  key={member.id} 
+                  dataKey={member.id} 
+                  name={member.name} 
+                  stackId="a" 
+                  fill={member.color} 
+                  radius={[0, 0, 0, 0]} 
+                />
+              ))}
             </BarChart>
           </ResponsiveContainer>
+        </div>
+        
+        {/* ポイント集計テキスト */}
+        <div className="mt-8 space-y-4">
+          <h4 className="text-[10px] font-black text-dark-500 uppercase tracking-widest ml-1">累計獲得ポイント</h4>
+          <div className="grid grid-cols-2 gap-2">
+            {pointStats.map((stat, index) => (
+              <div key={index} className="flex items-center justify-between p-3 rounded-xl bg-dark-900/50 border border-dark-700/50">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: stat.color }} />
+                  <span className="text-xs font-bold text-dark-200">{stat.name}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-sm font-black text-accent-warning">{stat.points}</span>
+                  <span className="text-[9px] text-dark-500 ml-1">pt</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
