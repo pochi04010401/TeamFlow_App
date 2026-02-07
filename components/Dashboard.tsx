@@ -210,12 +210,12 @@ function RecentActivity({ tasks }: { tasks: Task[] }) {
   );
 }
 
-// CSV出力ボタン (v1.45: ステータス別の全タスクを出力)
+// CSV出力ボタン (v1.45: 全ステータスを出力するように改善)
 function CSVExportButton({ tasks }: { tasks: Task[] }) {
   const handleExport = () => {
     if (tasks.length === 0) { toast.error('エクスポートするタスクがありません'); return; }
     
-    // 全てのステータス（pending, completed, cancelled）を含めてCSV生成
+    // 全てのステータス（進行中、完了、キャンセル）を日本語で出力
     const headers = ['ID', 'タイトル', '金額', 'ポイント', '担当者', 'ステータス', '開始日', '終了日', '完了日', '作成日'];
     const rows = tasks.map(task => [
       task.id,
@@ -230,7 +230,7 @@ function CSVExportButton({ tasks }: { tasks: Task[] }) {
       task.created_at
     ]);
 
-    const bom = '\uFEFF';
+    const bom = '\uFEFF'; // Excel等での文字化け防止用
     const csvContent = bom + [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -309,7 +309,7 @@ export function Dashboard() {
       
       if (tasksError) throw tasksError;
 
-      // 全タスク取得 (CSV出力用：キャンセル含む)
+      // 全タスク取得 (CSV出力用：キャンセル含む全期間)
       const { data: rawAllTasks } = await supabase
         .from('tasks')
         .select('*, member:members(*)')
@@ -399,7 +399,7 @@ export function Dashboard() {
       )}
 
       <RecentActivity tasks={filteredSummary.recentActivities} />
-      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.45</span></div>
+      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.46</span></div>
     </div>
   );
 }
