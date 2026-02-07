@@ -66,10 +66,14 @@ function Meter({
   const pendingPercent = calculatePercentage(completed + pending, target);
   return (
     <div className="card p-5">
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="font-medium text-dark-200">{label} {label === '売上' && '(千円)'}</h3>
           <p className="text-sm text-dark-400">目標: {formatValue(target)}</p>
+        </div>
+        <div className="text-right">
+          <span className="text-2xl font-black text-dark-100">{completedPercent}</span>
+          <span className="text-xs font-bold text-dark-500 ml-1">%</span>
         </div>
       </div>
       <div className="relative h-4 bg-dark-700 rounded-full overflow-hidden mb-3">
@@ -297,7 +301,7 @@ export function Dashboard() {
 
       {/* 最近のアクティビティ */}
       <RecentActivity tasks={filteredSummary.recentActivities} />
-      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.26</span></div>
+      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.27</span></div>
     </div>
   );
 }
