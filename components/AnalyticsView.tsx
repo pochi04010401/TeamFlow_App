@@ -172,7 +172,9 @@ export function AnalyticsView() {
                 </Pie>
                 <Tooltip 
                   formatter={(value: number) => [`${formatNumber(value)} 千円`, '売上']}
-                  contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '12px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '12px', fontSize: '12px' }}
+                  itemStyle={{ color: '#f8fafc' }}
+                  labelStyle={{ color: '#94a3b8' }}
                 />
               </PieChart>
             </ResponsiveContainer>
