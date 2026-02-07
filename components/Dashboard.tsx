@@ -11,7 +11,8 @@ import {
   formatDateJP,
   exportTasksToCSV,
   fireConfetti,
-  getNowJST
+  getNowJST,
+  formatDate
 } from '@/lib/utils';
 import type { Task, DashboardSummary, MemberStats, Member, RankingPeriod } from '@/lib/types';
 import { ErrorDisplay } from './ErrorBoundary';
@@ -209,12 +210,38 @@ function RecentActivity({ tasks }: { tasks: Task[] }) {
   );
 }
 
-// CSV出力ボタン
+// CSV出力ボタン (v1.45: ステータス別の全タスクを出力)
 function CSVExportButton({ tasks }: { tasks: Task[] }) {
   const handleExport = () => {
     if (tasks.length === 0) { toast.error('エクスポートするタスクがありません'); return; }
-    exportTasksToCSV(tasks);
-    toast.success('CSVをダウンロードしました');
+    
+    // 全てのステータス（pending, completed, cancelled）を含めてCSV生成
+    const headers = ['ID', 'タイトル', '金額', 'ポイント', '担当者', 'ステータス', '開始日', '終了日', '完了日', '作成日'];
+    const rows = tasks.map(task => [
+      task.id,
+      `"${task.title.replace(/"/g, '""')}"`,
+      task.amount.toString(),
+      task.points.toString(),
+      task.member?.name || '',
+      task.status === 'pending' ? '進行中' : task.status === 'completed' ? '完了' : 'キャンセル',
+      task.start_date || task.scheduled_date || '',
+      task.end_date || task.scheduled_date || '',
+      task.completed_at || '',
+      task.created_at
+    ]);
+
+    const bom = '\uFEFF';
+    const csvContent = bom + [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `TeamFlow_AllTasks_${formatDate(new Date())}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success('全てのタスクをCSV出力しました');
   };
   return (
     <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-dark-700 hover:bg-dark-600 transition-colors text-dark-300 hover:text-dark-100">
@@ -272,20 +299,25 @@ export function Dashboard() {
       const lastDay = new Date(y, m, 0).getDate();
       const endOfMonth = `${currentMonth}-${String(lastDay).padStart(2, '0')}`;
       
-      // タスクの取得
+      // タスクの取得 (集計用はキャンセル以外)
       const { data: tasks, error: tasksError } = await supabase
         .from('tasks')
         .select('*, member:members(*)')
-        .in('status', ['pending', 'completed'])
+        .neq('status', 'cancelled')
         .or(`start_date.lte.${endOfMonth},scheduled_date.lte.${endOfMonth}`)
         .or(`end_date.gte.${startOfMonth},scheduled_date.gte.${startOfMonth}`);
       
       if (tasksError) throw tasksError;
 
+      // 全タスク取得 (CSV出力用：キャンセル含む)
+      const { data: rawAllTasks } = await supabase
+        .from('tasks')
+        .select('*, member:members(*)')
+        .order('created_at', { ascending: false });
+
       // 年間ランキング用
       const { data: yearlyTasks } = await supabase.from('tasks').select('*, member:members(*)').gte('completed_at', `${currentYear}-01-01`).lte('completed_at', `${currentYear}-12-31`).eq('status', 'completed');
-      const { data: recentTasks } = await supabase.from('tasks').select('*').order('completed_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(5);
-      const { data: allTasksData } = await supabase.from('tasks').select('*, member:members(*)').order('created_at', { ascending: false });
+      const { data: recentTasks } = await supabase.from('tasks').select('*').neq('status', 'cancelled').order('completed_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(5);
       const { data: membersData } = await supabase.from('members').select('*').order('created_at');
       
       // 今月分に絞り込み
@@ -329,7 +361,7 @@ export function Dashboard() {
         return { member, totalAmount: mTasks.reduce((s, t) => s + (t.amount || 0), 0), completedAmount: mTasks.reduce((s, t) => s + (t.amount || 0), 0), totalPoints: mTasks.reduce((s, t) => s + (t.points || 0), 0), completedPoints: mTasks.reduce((s, t) => s + (t.points || 0), 0), taskCount: mTasks.length, completedTaskCount: mTasks.length };
       }));
       setMembers(membersData || []);
-      setAllTasks(allTasksData || []);
+      setAllTasks(rawAllTasks || []);
     } catch (err) { console.error(err); setError('データの取得に失敗しました'); } finally { setLoading(false); }
   };
 
@@ -367,7 +399,7 @@ export function Dashboard() {
       )}
 
       <RecentActivity tasks={filteredSummary.recentActivities} />
-      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.44</span></div>
+      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.45</span></div>
     </div>
   );
 }
