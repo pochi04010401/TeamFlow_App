@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, Line, AreaChart, Area
+  PieChart, Pie, Cell, Line, AreaChart, Area, ComposedChart
 } from 'recharts';
 import { 
   TrendingUp, Users, Target, Calendar, ArrowUpRight, 
@@ -43,13 +43,13 @@ export function AnalyticsView() {
   useEffect(() => { fetchData(); }, []);
 
   const monthlyData = useMemo(() => {
-    const data: { [key: string]: { month: string; amount: number; target: number; points: number } } = {};
+    const data: { [key: string]: { monthKey: string; month: string; amount: number; target: number; points: number } } = {};
     const now = getNowJST();
     const monthsToShow = timeRange === '6months' ? 6 : timeRange === 'year' ? 12 : 24;
     for (let i = monthsToShow - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const mStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      data[mStr] = { month: mStr.split('-')[1] + '月', amount: 0, target: 0, points: 0 };
+      data[mStr] = { monthKey: mStr, month: mStr.split('-')[1] + '月', amount: 0, target: 0, points: 0 };
     }
     goals.forEach(g => { if (data[g.month]) data[g.month].target = g.target_amount / 1000; });
     tasks.filter(t => t.status === 'completed' && t.completed_at).forEach(t => {
@@ -73,23 +73,6 @@ export function AnalyticsView() {
     const total = data.reduce((sum, d) => sum + d.value, 0);
     return data.map(d => ({ ...d, percent: total > 0 ? (d.value / total) * 100 : 0 }));
   }, [tasks, members]);
-
-  // v1.28: 目標 vs 実績データ
-  const goalVsActualData = useMemo(() => {
-    const currentMonth = getCurrentMonth();
-    const currentGoal = goals.find(g => g.month === currentMonth);
-    const thisMonthRevenue = tasks
-      .filter(t => {
-        if (t.status !== 'completed' || !t.completed_at) return false;
-        return t.completed_at.startsWith(currentMonth);
-      })
-      .reduce((sum, t) => sum + (t.amount || 0), 0) / 1000;
-
-    return [
-      { name: '目標', value: (currentGoal?.target_amount || 10000000) / 1000, fill: '#64748b' },
-      { name: '実績', value: thisMonthRevenue, fill: '#10b981' }
-    ];
-  }, [tasks, goals]);
 
   const stats = useMemo(() => {
     const currentMonth = getCurrentMonth();
@@ -157,27 +140,12 @@ export function AnalyticsView() {
         </div>
       </div>
 
-      {/* 目標 vs 実績 (v1.28) */}
+      {/* v1.43: 売上トレンド (目標 vs 実績を比較可能に) */}
       <div className="card p-5">
-        <h3 className="text-sm font-bold text-dark-200 mb-6 flex items-center gap-2"><Target className="w-4 h-4 text-accent-primary" />今月の目標達成状況</h3>
-        <div className="h-[200px] w-full">
+        <h3 className="text-sm font-bold text-dark-200 mb-6 flex items-center gap-2"><Calendar className="w-4 h-4 text-accent-secondary" />売上トレンド (目標 vs 実績)</h3>
+        <div className="h-[280px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={goalVsActualData} layout="vertical" margin={{ left: 20, right: 40 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false} />
-              <XAxis type="number" stroke="#94a3b8" fontSize={10} hide />
-              <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={12} width={40} />
-              <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '12px' }} />
-              <Bar dataKey="value" name="売上 (千円)" radius={[0, 4, 4, 0]} barSize={32} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      <div className="card p-5">
-        <h3 className="text-sm font-bold text-dark-200 mb-6 flex items-center gap-2"><Calendar className="w-4 h-4 text-accent-secondary" />売上トレンド (千円単位)</h3>
-        <div className="h-[240px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={monthlyData}>
+            <ComposedChart data={monthlyData}>
               <defs>
                 <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
@@ -187,10 +155,24 @@ export function AnalyticsView() {
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
               <XAxis dataKey="month" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
               <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `${v/1000}M`} />
-              <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '12px', fontSize: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '12px', fontSize: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }}
+                formatter={(value: number) => [`${formatNumber(value)} 千円`, '']}
+              />
               <Area type="monotone" dataKey="amount" name="売上実績" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorAmount)" />
-            </AreaChart>
+              <Line type="stepAfter" dataKey="target" name="売上目標" stroke="#64748b" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+            </ComposedChart>
           </ResponsiveContainer>
+        </div>
+        <div className="flex justify-center gap-6 mt-4">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-sm bg-[#10b981]" />
+            <span className="text-[10px] text-dark-400 font-bold">売上実績</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-0.5 border-t-2 border-dashed border-[#64748b]" />
+            <span className="text-[10px] text-dark-400 font-bold">売上目標</span>
+          </div>
         </div>
       </div>
 
