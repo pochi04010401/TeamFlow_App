@@ -3,6 +3,7 @@ import { Inter, Noto_Sans_JP } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/Providers';
 import { Navigation } from '@/components/Navigation';
+import { Header } from '@/components/Header';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -51,6 +52,7 @@ export default function RootLayout({
       </head>
       <body className="bg-dark-900 text-dark-100 antialiased">
         <Providers>
+          <Header />
           <main className="min-h-screen pb-20">
             {children}
           </main>

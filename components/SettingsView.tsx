@@ -65,8 +65,12 @@ export function SettingsView() {
       if (error) throw error;
       toast.success(`${selectedMonth}の目標を保存しました！`);
     } catch (err) {
-      console.error(err);
-      toast.error('保存に失敗しました');
+      console.error('Settings save error:', err);
+      const errorMessage = err instanceof Error ? err.message : '保存に失敗しました';
+      const errorCode = (err as any)?.code || 'UNKNOWN';
+      toast.error(`保存に失敗しました (${errorCode})`, {
+        description: errorMessage,
+      });
     } finally {
       setLoading(false);
     }
