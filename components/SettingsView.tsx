@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Target, Save, Loader2, Calendar, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Target, Save, Loader2, Calendar, Zap, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getCurrentMonth, formatNumber } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 export function SettingsView() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
@@ -92,6 +94,12 @@ export function SettingsView() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/logout');
   };
 
   const changeMonth = (offset: number) => {
@@ -184,6 +192,16 @@ export function SettingsView() {
           <li className="flex gap-2">• <span className="flex-1">保存した目標は、ダッシュボードの達成率メーターに即座に反映されます。</span></li>
           <li className="flex gap-2">• <span className="flex-1">過去の月の目標を変更することも可能です。</span></li>
         </ul>
+      </div>
+
+      <div className="pt-4">
+        <button 
+          onClick={handleLogout}
+          className="flex items-center justify-center gap-4 p-4 w-full rounded-xl bg-dark-800 text-accent-danger hover:bg-accent-danger/10 border border-dark-700 transition-all font-bold"
+        >
+          <LogOut className="w-5 h-5" />
+          <span>ログアウト</span>
+        </button>
       </div>
     </div>
   );

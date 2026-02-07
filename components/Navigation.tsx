@@ -2,13 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Calendar, PlusCircle, Clock } from 'lucide-react';
+import { Home, Calendar, PlusCircle, Clock, BarChart2, Target } from 'lucide-react';
 
 const navItems = [
   { href: '/', label: 'ホーム', icon: Home },
-  { href: '/schedule', label: 'スケジュール', icon: Calendar },
+  { href: '/schedule', label: 'スケ', icon: Calendar }, // 名前を短縮
+  { href: '/analytics', label: '分析', icon: BarChart2 },
   { href: '/pending', label: '進行中', icon: Clock },
   { href: '/input', label: '登録', icon: PlusCircle },
+  { href: '/settings', label: '目標', icon: Target }, // v1.32: 追加
 ];
 
 export function Navigation() {
@@ -20,8 +22,8 @@ export function Navigation() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-dark-700/50">
-      <div className="w-full">
-        <div className="flex items-center justify-between">
+      <div className="w-full overflow-hidden">
+        <div className="flex items-center justify-around w-full">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
@@ -31,11 +33,11 @@ export function Navigation() {
                 key={item.href}
                 href={item.href}
                 className={`flex-1 flex flex-col items-center justify-center py-3 transition-all duration-200 ${
-                  isActive ? 'bg-accent-primary/5 text-accent-primary' : 'text-dark-400'
+                  isActive ? 'bg-accent-primary/10 text-accent-primary' : 'text-dark-400 active:bg-dark-700'
                 }`}
               >
-                <Icon className={`w-6 h-6 mb-1 ${isActive ? 'scale-110' : ''}`} />
-                <span className={`text-[10px] font-bold ${isActive ? '' : 'text-dark-500'}`}>
+                <Icon className={`w-5 h-5 mb-1 ${isActive ? 'scale-110' : ''}`} />
+                <span className={`text-[8px] font-black tracking-tighter ${isActive ? '' : 'text-dark-500'}`}>
                   {item.label}
                 </span>
               </Link>
