@@ -45,6 +45,11 @@ export function TaskEditModal({
   });
 
   const handleUpdate = async () => {
+    // バリデーション (v1.49: 負数チェック追加)
+    if (formData.amount < 0) {
+      return toast.error('売上にマイナスの数値は入力できません');
+    }
+
     setLoading(true);
     try {
       const supabase = createClient();
@@ -79,37 +84,36 @@ export function TaskEditModal({
   };
 
   const handleDelete = async () => {
-    if (!confirm('本当に削除しますか？')) return;
+    // v1.49: 確認ダイアログの表示と処理を確実に実行
+    if (!window.confirm('本当にこのタスクを削除しますか？\n（削除されたタスクは集計から除外されます）')) return;
+    
     setLoading(true);
     try {
       const supabase = createClient();
       
-      // v1.48: 物理削除から論理削除（status='deleted'）に変更
+      // v1.49: 論理削除 (status='deleted')
       const { error } = await supabase
         .from('tasks')
         .update({ status: 'deleted' })
         .eq('id', task.id);
 
       if (error) {
-        // もしDBの制約で'deleted'が使えない場合は'cancelled'で代用（念のため）
-        if (error.code === '23514') {
-          const { error: retryError } = await supabase
-            .from('tasks')
-            .update({ status: 'cancelled' })
-            .eq('id', task.id);
-          if (retryError) throw retryError;
-        } else {
-          throw error;
-        }
+        console.error('Supabase delete error:', error);
+        throw error;
       }
 
-      toast.success('削除として登録しました');
-      onUpdate();
-      router.refresh();
-      onClose();
+      toast.success('タスクを削除しました');
+      
+      // 遅延を入れて確実にDB反映を待ってからリフレッシュ
+      setTimeout(() => {
+        onUpdate();
+        router.refresh();
+        onClose();
+      }, 500);
+      
     } catch (err) {
-      console.error('Delete error:', err);
-      const message = err instanceof Error ? err.message : '削除に失敗しました';
+      console.error('Delete error details:', err);
+      const message = err instanceof Error ? err.message : '不明なエラー';
       toast.error(`削除に失敗しました: ${message}`);
     } finally {
       setLoading(false);
@@ -117,8 +121,8 @@ export function TaskEditModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-dark-950/90 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="card w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border-dark-700 animate-in zoom-in-95 duration-300">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-dark-950/90 backdrop-blur-md animate-in fade-in duration-300" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="card w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border-dark-700 animate-in zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>
         
         {/* ヘッダー */}
         <div className="flex items-center justify-between p-6 border-b border-dark-700 bg-dark-800/50">
@@ -150,6 +154,7 @@ export function TaskEditModal({
               {(['pending', 'completed'] as const).map(s => (
                 <button
                   key={s}
+                  type="button"
                   onClick={() => setFormData({...formData, status: s})}
                   className={`flex-1 py-3 text-xs font-black rounded-lg transition-all ${
                     formData.status === s 
@@ -176,8 +181,8 @@ export function TaskEditModal({
                     onClick={() => setFormData({ ...formData, member_id: member.id })}
                     className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${
                       isSelected 
-                        ? 'border-accent-primary bg-accent-primary/10' 
-                        : 'border-dark-700 bg-dark-900'
+                        ? 'border-accent-primary bg-accent-primary/10 shadow-glow-sm' 
+                        : 'border-dark-700 bg-dark-900 hover:border-dark-500'
                     }`}
                   >
                     <div className="w-8 h-8 rounded-full flex items-center justify-center shadow-sm" style={{ backgroundColor: member.color }}>
@@ -193,10 +198,11 @@ export function TaskEditModal({
           {/* 3. 売上 & ポイント */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase text-dark-500 tracking-widest ml-1">売上</label>
+              <label className="text-[10px] font-black uppercase text-dark-500 tracking-widest ml-1">売上 (千円)</label>
               <div className="relative flex items-center gap-2">
                 <input 
                   type="number" 
+                  min="0"
                   className="w-full bg-dark-900 border-2 border-dark-700 rounded-2xl px-5 py-4 text-dark-100 font-black focus:border-accent-success transition-all outline-none" 
                   value={formData.amount} 
                   onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
@@ -256,17 +262,19 @@ export function TaskEditModal({
         {/* フッターアクション */}
         <div className="p-6 border-t border-dark-700 bg-dark-800/50 flex gap-3">
           <button 
+            type="button"
             disabled={loading}
-            onClick={handleDelete}
-            className="p-4 rounded-2xl bg-accent-danger/10 text-accent-danger hover:bg-accent-danger/20 transition-all active:scale-95"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(); }}
+            className="p-4 rounded-2xl bg-accent-danger/10 text-accent-danger hover:bg-accent-danger/20 transition-all active:scale-95 disabled:opacity-50"
             title="削除"
           >
-            <Trash2 className="w-6 h-6" />
+            {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Trash2 className="w-6 h-6" />}
           </button>
           <button 
+            type="button"
             disabled={loading}
             onClick={handleUpdate}
-            className="flex-1 btn-primary h-16 flex items-center justify-center gap-3 text-lg font-black shadow-glow"
+            className="flex-1 btn-primary h-16 flex items-center justify-center gap-3 text-lg font-black shadow-glow disabled:opacity-50"
           >
             {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Save className="w-6 h-6" /> 変更を保存する</>}
           </button>

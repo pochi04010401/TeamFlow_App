@@ -10,8 +10,8 @@ export interface Member {
   created_at: string;
 }
 
-// タスクステータス
-export type TaskStatus = 'pending' | 'completed';
+// タスクステータス (v1.49: cancelled, deletedを追加)
+export type TaskStatus = 'pending' | 'completed' | 'cancelled' | 'deleted';
 
 // タスク (v1.1: start_date, end_date対応)
 export interface Task {

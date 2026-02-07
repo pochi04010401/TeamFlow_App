@@ -49,7 +49,7 @@ function RankingPeriodToggle({
   );
 }
 
-// メーターコンポーネント (v1.44: 目標を左上に、数値をクッキリ表示)
+// メーターコンポーネント (v1.49: 演出の安定化)
 function Meter({ 
   label, 
   completed, 
@@ -69,11 +69,13 @@ function Meter({
   const pendingPercent = calculatePercentage(completed + pending, target);
   const isGoalReached = completedPercent >= 100;
 
+  // v1.49: マウント時またはデータ更新時に条件を満たしていれば演出を実行
   useEffect(() => {
     if (isGoalReached) {
-      fireConfetti();
+      const timer = setTimeout(() => fireConfetti(), 1000);
+      return () => clearTimeout(timer);
     }
-  }, [isGoalReached]);
+  }, [isGoalReached, completed]);
 
   return (
     <div className={`card p-5 transition-all duration-500 ${isGoalReached ? 'border-accent-warning shadow-glow-sm bg-accent-warning/5' : ''}`}>
@@ -215,7 +217,7 @@ function CSVExportButton({ tasks }: { tasks: Task[] }) {
   const handleExport = () => {
     if (tasks.length === 0) { toast.error('エクスポートするタスクがありません'); return; }
     
-    // 全てのステータス（進行中、完了、キャンセル）を日本語で出力
+    // 全てのステータス（進行中、完了、キャンセル、削除）を日本語で出力
     const headers = ['ID', 'タイトル', '金額', 'ポイント', '担当者', 'ステータス', '開始日', '終了日', '完了日', '作成日'];
     const rows = tasks.map(task => [
       task.id,
@@ -223,14 +225,14 @@ function CSVExportButton({ tasks }: { tasks: Task[] }) {
       task.amount.toString(),
       task.points.toString(),
       task.member?.name || '',
-      task.status === 'pending' ? '進行中' : task.status === 'completed' ? '完了' : 'キャンセル',
+      task.status === 'pending' ? '進行中' : task.status === 'completed' ? '完了' : task.status === 'cancelled' ? 'キャンセル' : '削除',
       task.start_date || task.scheduled_date || '',
       task.end_date || task.scheduled_date || '',
       task.completed_at || '',
       task.created_at
     ]);
 
-    const bom = '\uFEFF'; // Excel等での文字化け防止用
+    const bom = '\uFEFF';
     const csvContent = bom + [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -318,7 +320,10 @@ export function Dashboard() {
 
       // 年間ランキング用
       const { data: yearlyTasks } = await supabase.from('tasks').select('*, member:members(*)').gte('completed_at', `${currentYear}-01-01`).lte('completed_at', `${currentYear}-12-31`).eq('status', 'completed');
+      
+      // v1.49: 最新アクティビティから削除済みを除外
       const { data: recentTasks } = await supabase.from('tasks').select('*').in('status', ['pending', 'completed']).order('completed_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(5);
+      
       const { data: membersData } = await supabase.from('members').select('*').order('created_at');
       
       // 今月分に絞り込み
@@ -400,7 +405,7 @@ export function Dashboard() {
       )}
 
       <RecentActivity tasks={filteredSummary.recentActivities} />
-      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.48</span></div>
+      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.49</span></div>
     </div>
   );
 }

@@ -45,6 +45,12 @@ export function TaskForm({ members }: { members: Member[] }) {
     e.preventDefault();
     if (!formData.title) return toast.error('案件名を入力してください');
     
+    // バリデーション (v1.49: 負数チェック追加)
+    const numericAmount = formData.amountStr === '' ? 0 : Number(formData.amountStr);
+    if (numericAmount < 0) {
+      return toast.error('売上にマイナスの数値は入力できません');
+    }
+
     setLoading(true);
 
     try {
@@ -59,7 +65,7 @@ export function TaskForm({ members }: { members: Member[] }) {
         .from('tasks')
         .insert([{
           title: formData.title,
-          amount: (formData.amountStr === '' ? 0 : Number(formData.amountStr)) * 1000,
+          amount: numericAmount * 1000,
           points: formData.points,
           member_id: formData.member_id,
           start_date: formData.start_date,
@@ -160,11 +166,12 @@ export function TaskForm({ members }: { members: Member[] }) {
           
           <div className="space-y-5">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-dark-500 uppercase tracking-widest ml-1">売上予定</label>
+              <label className="text-[10px] font-black text-dark-500 uppercase tracking-widest ml-1">売上予定 (千円)</label>
               <div className="relative w-full group">
                 <input
                   type="number"
                   inputMode="numeric"
+                  min="0"
                   value={formData.amountStr}
                   onChange={(e) => setFormData({ ...formData, amountStr: e.target.value })}
                   placeholder="0"

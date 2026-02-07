@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Clock, Loader2, Check, Edit2, CheckCircle2 } from 'lucide-react';
+import { Clock, Loader2, Check, Edit2, CheckCircle2, CheckCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { formatDate, formatCurrency, fireConfetti } from '@/lib/utils';
 import type { CalendarTask, Member, TaskStatus } from '@/lib/types';
@@ -73,14 +73,13 @@ export function PendingTasks() {
 
       if (membersError) throw membersError;
 
-      // タスクを取得
-      const query = supabase
+      // タスクを取得 (v1.48: 論理削除以外すべて)
+      const { data, error: fetchError } = await supabase
         .from('tasks')
         .select('*, member:members(*)')
+        .neq('status', 'deleted')
         .order('end_date', { ascending: true, nullsFirst: false })
         .order('start_date', { ascending: true, nullsFirst: false });
-      
-      const { data, error: fetchError } = await query.in('status', ['pending', 'completed', 'cancelled']);
 
       if (fetchError) throw fetchError;
 
@@ -151,14 +150,14 @@ export function PendingTasks() {
   };
 
   const isOverdue = (task: CalendarTask): boolean => {
-    if (task.status === 'completed') return false;
+    if (task.status === 'completed' || task.status === 'cancelled') return false;
     const endDate = task.end_date || task.scheduled_date;
     if (!endDate) return false;
     return endDate < formatDate(new Date());
   };
 
   const isDueToday = (task: CalendarTask): boolean => {
-    if (task.status === 'completed') return false;
+    if (task.status === 'completed' || task.status === 'cancelled') return false;
     const endDate = task.end_date || task.scheduled_date;
     if (!endDate) return false;
     return endDate === formatDate(new Date());
@@ -179,6 +178,18 @@ export function PendingTasks() {
   return (
     <>
       <div className="flex flex-col gap-4 mb-6">
+        <div className="text-center py-4">
+          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3 ${statusFilter === 'completed' ? 'bg-accent-success/20 text-accent-success' : 'bg-accent-primary/20 text-accent-primary'}`}>
+            {statusFilter === 'completed' ? <CheckCircle className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
+          </div>
+          <h1 className="text-2xl font-black text-dark-100">
+            {statusFilter === 'pending' ? '進行中タスク' : statusFilter === 'completed' ? '完了済みタスク' : '全タスク一覧'}
+          </h1>
+          <p className="text-sm text-dark-500 mt-1">
+            {statusFilter === 'pending' ? '現在取り組んでいる案件です' : statusFilter === 'completed' ? 'これまでに達成した案件です' : '全てのステータスの案件を表示しています'}
+          </p>
+        </div>
+
         <div className="flex items-center justify-between gap-3">
           <MemberFilter
             members={members}
@@ -200,7 +211,7 @@ export function PendingTasks() {
         </div>
       ) : (
         <div className="space-y-3 animate-fade-in">
-          <p className="text-sm text-dark-400 px-1">
+          <p className="text-[10px] font-black uppercase text-dark-500 tracking-widest px-1">
             {selectedMemberId ? `${members.find(m => m.id === selectedMemberId)?.name}の` : ''}
             {statusFilter === 'pending' ? '進行中' : statusFilter === 'completed' ? '完了済み' : '全て'}
             のタスク: {filteredTasks.length}件
@@ -210,6 +221,7 @@ export function PendingTasks() {
             const overdue = isOverdue(task);
             const dueToday = isDueToday(task);
             const isCompleted = task.status === 'completed';
+            const isCancelled = task.status === 'cancelled';
             const startDate = task.start_date || task.scheduled_date || '';
             const endDate = task.end_date || task.scheduled_date || '';
 
@@ -218,26 +230,27 @@ export function PendingTasks() {
                 key={task.id}
                 onClick={() => handleTaskClick(task)}
                 className={`card p-4 cursor-pointer transition-all duration-200 hover:scale-[1.01] ${
-                  isCompleted ? 'opacity-70 grayscale-[0.3]' : overdue ? 'border-2 border-accent-danger/50' : dueToday ? 'border-2 border-accent-warning/50' : ''
+                  isCompleted ? 'opacity-70 grayscale-[0.3]' : isCancelled ? 'opacity-50 grayscale' : overdue ? 'border-2 border-accent-danger/50' : dueToday ? 'border-2 border-accent-warning/50' : ''
                 }`}
               >
                 <div className="flex items-start gap-4">
-                  <button onClick={(e) => { e.stopPropagation(); handleToggleStatus(task); }} disabled={updatingTask === task.id} className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${isCompleted ? 'border-accent-success bg-accent-success/20 text-accent-success' : updatingTask === task.id ? 'border-accent-primary bg-accent-primary/20' : 'border-dark-500 hover:border-accent-success hover:bg-accent-success/20 text-dark-500'}`}>
+                  <button onClick={(e) => { e.stopPropagation(); handleToggleStatus(task); }} disabled={updatingTask === task.id || isCancelled} className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${isCompleted ? 'border-accent-success bg-accent-success/20 text-accent-success' : isCancelled ? 'border-dark-600 bg-dark-700 text-dark-500' : updatingTask === task.id ? 'border-accent-primary bg-accent-primary/20' : 'border-dark-500 hover:border-accent-success hover:bg-accent-success/20 text-dark-500'}`}>
                     {updatingTask === task.id ? <Loader2 className="w-4 h-4 animate-spin" /> : isCompleted ? <CheckCircle2 className="w-5 h-5" /> : <Check className="w-4 h-4" />}
                   </button>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       {task.member && <div className="w-5 h-5 rounded-full flex-shrink-0" style={{ backgroundColor: task.member.color }} />}
-                      <h3 className={`font-medium truncate ${isCompleted ? 'text-dark-400 line-through' : 'text-dark-100'}`}>{task.title}</h3>
+                      <h3 className={`font-medium truncate ${isCompleted ? 'text-dark-400 line-through' : isCancelled ? 'text-dark-500' : 'text-dark-100'}`}>{task.title}</h3>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-dark-400">
-                      <span className={`font-medium ${isCompleted ? 'text-dark-500' : 'text-accent-success'}`}>{formatCurrency(task.amount)}</span>
+                      <span className={`font-medium ${isCompleted ? 'text-dark-500' : isCancelled ? 'text-dark-600' : 'text-accent-success'}`}>{formatCurrency(task.amount)}</span>
                       <span>{task.points}pt</span>
                       {task.member && <span>{task.member.name}</span>}
                     </div>
-                    <div className={`mt-2 text-xs ${isCompleted ? 'text-dark-500' : overdue ? 'text-accent-danger font-medium' : dueToday ? 'text-accent-warning font-medium' : 'text-dark-500'}`}>
+                    <div className={`mt-2 text-xs ${isCompleted ? 'text-dark-500' : isCancelled ? 'text-dark-600' : overdue ? 'text-accent-danger font-medium' : dueToday ? 'text-accent-warning font-medium' : 'text-dark-500'}`}>
                       {startDate === endDate ? <span>{startDate}</span> : <span>{startDate} 〜 {endDate}</span>}
                       {isCompleted && task.completed_at && <span className="ml-2 text-accent-success">✅ {formatDate(task.completed_at)} 完了</span>}
+                      {isCancelled && <span className="ml-2 text-dark-500">🚫 キャンセル済み</span>}
                     </div>
                   </div>
                   <Edit2 className="w-4 h-4 text-dark-500 flex-shrink-0" />
