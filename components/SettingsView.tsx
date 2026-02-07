@@ -56,28 +56,32 @@ export function SettingsView() {
     try {
       const supabase = createClient();
       
-      // v1.41: 重複を許さないUPSERT戦略 (monthをキーにする)
-      // schema.sqlでmonthにUNIQUE制約があるため、upsertが最も安全
+      // v1.42: updated_atカラムが存在しないため削除。
+      // また、より確実な「存在確認してから更新or挿入」パターンに戻す
       const payload = {
         month: selectedMonth,
         target_amount: goalData.target_amount * 1000,
-        target_points: goalData.target_points,
-        updated_at: new Date().toISOString()
+        target_points: goalData.target_points
       };
 
-      const { error } = await supabase
+      const { data: existing } = await supabase
         .from('monthly_goals')
-        .upsert(payload, { onConflict: 'month' });
+        .select('id')
+        .eq('month', selectedMonth);
 
-      if (error) {
-        // もしUNIQUE制約エラー(23505)が出る場合は、古いデータとの競合を避けるため一度消してから入れる
-        if (error.code === '23505' || error.code === '42P10') {
-          await supabase.from('monthly_goals').delete().eq('month', selectedMonth);
-          const { error: retryError } = await supabase.from('monthly_goals').insert([payload]);
-          if (retryError) throw retryError;
-        } else {
-          throw error;
-        }
+      if (existing && existing.length > 0) {
+        // 更新
+        const { error: updateError } = await supabase
+          .from('monthly_goals')
+          .update(payload)
+          .eq('id', existing[0].id);
+        if (updateError) throw updateError;
+      } else {
+        // 新規
+        const { error: insertError } = await supabase
+          .from('monthly_goals')
+          .insert([payload]);
+        if (insertError) throw insertError;
       }
 
       toast.success(`${selectedMonth}の目標を保存しました！`);
