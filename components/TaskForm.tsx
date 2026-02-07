@@ -82,7 +82,7 @@ export function TaskForm({ members }: { members: Member[] }) {
   };
 
   return (
-    <div className="animate-fade-in pb-12 px-4 max-w-lg mx-auto">
+    <div className="animate-fade-in pb-12 px-4 max-w-lg mx-auto w-full">
       <div className="relative py-8 text-center overflow-hidden rounded-3xl mb-8 bg-gradient-to-br from-accent-primary/20 to-transparent border border-accent-primary/10">
         <div className="relative z-10">
           <div className="w-16 h-16 bg-accent-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-glow">
@@ -94,7 +94,7 @@ export function TaskForm({ members }: { members: Member[] }) {
         <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-48 h-48 bg-accent-primary/10 rounded-full blur-3xl" />
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-8 w-full">
         {/* 基本情報 */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-2 ml-1">
@@ -114,7 +114,7 @@ export function TaskForm({ members }: { members: Member[] }) {
           </div>
         </div>
 
-        {/* 担当者 (v1.36: コンパクト化) */}
+        {/* 担当者 */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-2 ml-1">
             <div className="w-1.5 h-4 bg-accent-secondary rounded-full" />
@@ -140,7 +140,7 @@ export function TaskForm({ members }: { members: Member[] }) {
           </div>
         </div>
 
-        {/* 数値情報 (v1.36: 右側をピッタリ揃える) */}
+        {/* 売上予定 & 獲得ポイント (v1.37: 右端の整列を徹底) */}
         <div className="space-y-6">
           <div className="flex items-center gap-2 mb-2 ml-1">
             <div className="w-1.5 h-4 bg-accent-success rounded-full" />
@@ -148,9 +148,10 @@ export function TaskForm({ members }: { members: Member[] }) {
           </div>
           
           <div className="space-y-4">
+            {/* 売上 */}
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-dark-500 uppercase ml-1">売上予定</label>
-              <div className="relative w-full">
+              <div className="relative w-full flex items-center">
                 <input
                   type="number"
                   inputMode="numeric"
@@ -159,10 +160,11 @@ export function TaskForm({ members }: { members: Member[] }) {
                   placeholder="0"
                   className="w-full bg-dark-800 border-2 border-dark-700 rounded-2xl pl-6 pr-16 py-4 text-dark-100 font-black text-xl focus:border-accent-success outline-none"
                 />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-dark-400">千円</span>
+                <span className="absolute right-4 text-sm font-bold text-dark-400 pointer-events-none">千円</span>
               </div>
             </div>
 
+            {/* ポイント */}
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-dark-500 uppercase ml-1">獲得ポイント</label>
               <div className="relative w-full">
@@ -181,7 +183,7 @@ export function TaskForm({ members }: { members: Member[] }) {
           </div>
         </div>
 
-        {/* スケジュール */}
+        {/* スケジュール (v1.37: 右端の整列) */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-2 ml-1">
             <div className="w-1.5 h-4 bg-blue-500 rounded-full" />
