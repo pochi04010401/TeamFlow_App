@@ -69,6 +69,7 @@ export function TaskForm({ members }: { members: Member[] }) {
         }]);
 
       if (error) throw error;
+
       toast.success('タスクを登録しました！');
       router.push('/');
       router.refresh();
@@ -113,13 +114,13 @@ export function TaskForm({ members }: { members: Member[] }) {
           </div>
         </div>
 
-        {/* 担当者 */}
+        {/* 担当者 (v1.36: コンパクト化) */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-2 ml-1">
             <div className="w-1.5 h-4 bg-accent-secondary rounded-full" />
             <h2 className="text-xs font-black text-dark-300 uppercase tracking-widest">担当メンバー</h2>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {members.map((member) => {
               const isSelected = formData.member_id === member.id;
               return (
@@ -127,61 +128,60 @@ export function TaskForm({ members }: { members: Member[] }) {
                   key={member.id}
                   type="button"
                   onClick={() => setFormData({ ...formData, member_id: member.id })}
-                  className={`relative flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${isSelected ? 'border-accent-primary bg-accent-primary/10' : 'border-dark-700 bg-dark-800 hover:border-dark-600'}`}
+                  className={`relative flex flex-col items-center gap-1.5 p-2 rounded-xl border-2 transition-all ${isSelected ? 'border-accent-primary bg-accent-primary/10' : 'border-dark-700 bg-dark-800'}`}
                 >
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center shadow-sm" style={{ backgroundColor: member.color }}>
-                    {isSelected && <Check className="w-5 h-5" style={{ color: getContrastColor(member.color) }} />}
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shadow-sm" style={{ backgroundColor: member.color }}>
+                    {isSelected && <Check className="w-4 h-4" style={{ color: getContrastColor(member.color) }} />}
                   </div>
-                  <span className={`text-[10px] font-black truncate w-full text-center ${isSelected ? 'text-dark-100' : 'text-dark-400'}`}>{member.name}</span>
+                  <span className={`text-[9px] font-black truncate w-full text-center ${isSelected ? 'text-dark-100' : 'text-dark-500'}`}>{member.name}</span>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* 売上 & ポイント */}
+        {/* 数値情報 (v1.36: 右側をピッタリ揃える) */}
         <div className="space-y-6">
+          <div className="flex items-center gap-2 mb-2 ml-1">
+            <div className="w-1.5 h-4 bg-accent-success rounded-full" />
+            <h2 className="text-xs font-black text-dark-300 uppercase tracking-widest">売上とポイント</h2>
+          </div>
+          
           <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-2 ml-1">
-              <div className="w-1.5 h-4 bg-accent-success rounded-full" />
-              <h2 className="text-xs font-black text-dark-300 uppercase tracking-widest">売上とポイント</h2>
-            </div>
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-dark-500 uppercase ml-1">売上予定</label>
-                <div className="relative flex items-center gap-3">
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    value={formData.amountStr}
-                    onChange={(e) => setFormData({ ...formData, amountStr: e.target.value })}
-                    placeholder="0"
-                    className="flex-1 bg-dark-800 border-2 border-dark-700 rounded-2xl px-6 py-4 text-dark-100 font-black text-xl focus:border-accent-success outline-none"
-                  />
-                  <span className="text-sm font-bold text-dark-400 flex-shrink-0 bg-dark-700 px-4 py-4 rounded-xl border border-dark-600">千円</span>
-                </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-dark-500 uppercase ml-1">売上予定</label>
+              <div className="relative w-full">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={formData.amountStr}
+                  onChange={(e) => setFormData({ ...formData, amountStr: e.target.value })}
+                  placeholder="0"
+                  className="w-full bg-dark-800 border-2 border-dark-700 rounded-2xl pl-6 pr-16 py-4 text-dark-100 font-black text-xl focus:border-accent-success outline-none"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-dark-400">千円</span>
               </div>
+            </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-dark-500 uppercase ml-1">獲得ポイント</label>
-                <div className="relative">
-                  <select
-                    required
-                    value={formData.points}
-                    onChange={(e) => setFormData({ ...formData, points: Number(e.target.value) })}
-                    className="w-full bg-dark-800 border-2 border-dark-700 rounded-2xl pl-12 pr-6 py-4 text-dark-100 font-black text-xl focus:border-accent-warning outline-none appearance-none"
-                  >
-                    {[0, 10, 20, 30, 40, 50].map((pt) => <option key={pt} value={pt}>{pt} pt</option>)}
-                  </select>
-                  <Zap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-accent-warning" />
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 pointer-events-none" />
-                </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-dark-500 uppercase ml-1">獲得ポイント</label>
+              <div className="relative w-full">
+                <Zap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-accent-warning" />
+                <select
+                  required
+                  value={formData.points}
+                  onChange={(e) => setFormData({ ...formData, points: Number(e.target.value) })}
+                  className="w-full bg-dark-800 border-2 border-dark-700 rounded-2xl pl-12 pr-12 py-4 text-dark-100 font-black text-xl focus:border-accent-warning outline-none appearance-none"
+                >
+                  {[0, 10, 20, 30, 40, 50].map((pt) => <option key={pt} value={pt}>{pt} pt</option>)}
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-500 pointer-events-none" />
               </div>
             </div>
           </div>
         </div>
 
-        {/* スケジュール (v1.35修正) */}
+        {/* スケジュール */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-2 ml-1">
             <div className="w-1.5 h-4 bg-blue-500 rounded-full" />
@@ -190,7 +190,7 @@ export function TaskForm({ members }: { members: Member[] }) {
           <div className="space-y-4">
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-dark-500 uppercase ml-1">開始日</label>
-              <div className="relative">
+              <div className="relative w-full">
                 <input
                   type="date"
                   required
@@ -203,7 +203,7 @@ export function TaskForm({ members }: { members: Member[] }) {
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-dark-500 uppercase ml-1">終了日</label>
-              <div className="relative">
+              <div className="relative w-full">
                 <input
                   type="date"
                   required
@@ -224,7 +224,7 @@ export function TaskForm({ members }: { members: Member[] }) {
             <div className="w-1.5 h-4 bg-dark-400 rounded-full" />
             <h2 className="text-xs font-black text-dark-300 uppercase tracking-widest">メモ (オプション)</h2>
           </div>
-          <div className="relative">
+          <div className="relative w-full">
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
