@@ -217,7 +217,7 @@ function TsukiComment() {
           <Cat className="w-5 h-5 text-white fill-white" />
         </div>
         <div>
-          <h3 className="text-sm font-black text-dark-100">看板猫・月ちゃんの応援！</h3>
+          <h3 className="text-sm font-black text-dark-100">看板猫・ツキちゃんの応援！</h3>
           <p className="text-[10px] text-dark-400 font-bold uppercase tracking-widest">Tsuki's Cheer</p>
         </div>
       </div>
@@ -559,14 +559,14 @@ export function Dashboard() {
 
       <RecentActivity tasks={filteredSummary.recentActivities} />
 
-      {/* v1.56: 分析・応援・Tipsの三段構成 */}
+      {/* v1.57: 分析・応援・Tipsの三段構成 */}
       <div className="space-y-6 pt-4 border-t border-dark-700/50">
         <AnalystInsight summary={summary} memberStats={memberStats} />
         <TsukiComment />
         <BusinessColumn />
       </div>
 
-      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.56</span></div>
+      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.57</span></div>
     </div>
   );
 }
