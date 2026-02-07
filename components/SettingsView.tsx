@@ -1,14 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Target, Save, Loader2, Calendar, Zap, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { Target, Save, Loader2, Calendar, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getCurrentMonth, formatNumber } from '@/lib/utils';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 export function SettingsView() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
@@ -34,7 +32,6 @@ export function SettingsView() {
           target_points: data[0].target_points
         });
       } else {
-        // デフォルト値
         setGoalData({ target_amount: 10000, target_points: 1000 });
       }
     } catch (err) {
@@ -54,7 +51,6 @@ export function SettingsView() {
     try {
       const supabase = createClient();
       
-      // v1.30: 42P10エラー対策。onConflictを使わず、まず既存データがあるかIDを取得
       const { data: existing } = await supabase
         .from('monthly_goals')
         .select('id')
@@ -67,14 +63,12 @@ export function SettingsView() {
       };
 
       if (existing && existing.length > 0) {
-        // 更新
         const { error } = await supabase
           .from('monthly_goals')
           .update(payload)
           .eq('id', existing[0].id);
         if (error) throw error;
       } else {
-        // 新規挿入
         const { error } = await supabase
           .from('monthly_goals')
           .insert([payload]);
@@ -82,7 +76,6 @@ export function SettingsView() {
       }
 
       toast.success(`${selectedMonth}の目標を保存しました！`);
-      // 保存後に再取得して同期を確認
       await fetchGoal(selectedMonth);
     } catch (err) {
       console.error('Settings save error:', err);
@@ -94,12 +87,6 @@ export function SettingsView() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push('/logout');
   };
 
   const changeMonth = (offset: number) => {
@@ -192,16 +179,6 @@ export function SettingsView() {
           <li className="flex gap-2">• <span className="flex-1">保存した目標は、ダッシュボードの達成率メーターに即座に反映されます。</span></li>
           <li className="flex gap-2">• <span className="flex-1">過去の月の目標を変更することも可能です。</span></li>
         </ul>
-      </div>
-
-      <div className="pt-4">
-        <button 
-          onClick={handleLogout}
-          className="flex items-center justify-center gap-4 p-4 w-full rounded-xl bg-dark-800 text-accent-danger hover:bg-accent-danger/10 border border-dark-700 transition-all font-bold"
-        >
-          <LogOut className="w-5 h-5" />
-          <span>ログアウト</span>
-        </button>
       </div>
     </div>
   );

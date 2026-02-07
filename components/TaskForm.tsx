@@ -89,7 +89,7 @@ export function TaskForm({ members }: { members: Member[] }) {
           <div className="w-20 h-20 bg-accent-primary rounded-3xl flex items-center justify-center mx-auto mb-5 shadow-glow">
             <PlusCircle className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-3xl font-black text-dark-100 tracking-tighter">TASK CREATION</h1>
+          <h1 className="text-3xl font-black text-dark-100 tracking-tighter">新規タスク登録</h1>
           <p className="text-sm text-dark-400 mt-2 font-bold tracking-wide">新しい案件をチームに共有しましょう</p>
         </div>
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(56,189,248,0.1),transparent_70%)]" />
@@ -151,7 +151,7 @@ export function TaskForm({ members }: { members: Member[] }) {
           </div>
         </div>
 
-        {/* 3. 売上 & ポイント (v1.38: パーフェクト・アライメント) */}
+        {/* 3. 売上 & ポイント */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-2 ml-1">
             <div className="w-2 h-5 bg-accent-success rounded-full" />
@@ -194,7 +194,7 @@ export function TaskForm({ members }: { members: Member[] }) {
           </div>
         </div>
 
-        {/* 4. スケジュール (v1.38: 日付入力も完璧に揃える) */}
+        {/* 4. スケジュール */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-2 ml-1">
             <div className="w-2 h-5 bg-blue-500 rounded-full" />
@@ -260,7 +260,7 @@ export function TaskForm({ members }: { members: Member[] }) {
                 <Loader2 className="w-10 h-10 animate-spin" />
               ) : (
                 <>
-                  <span className="tracking-widest">TASK REGISTER</span>
+                  <span className="tracking-widest">タスクを登録</span>
                   <PlusCircle className="w-8 h-8 group-hover:rotate-90 transition-transform duration-500" />
                 </>
               )}
