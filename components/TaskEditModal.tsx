@@ -68,6 +68,7 @@ export function TaskEditModal({
       if (error) throw error;
       toast.success('更新しました');
       onUpdate();
+      router.refresh();
       onClose();
     } catch (err) {
       console.error('Update error:', err);
