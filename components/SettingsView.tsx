@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Target, Save, Loader2, Calendar, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getCurrentMonth, formatNumber } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export function SettingsView() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
@@ -76,6 +78,7 @@ export function SettingsView() {
       }
 
       toast.success(`${selectedMonth}の目標を保存しました！`);
+      router.refresh();
       await fetchGoal(selectedMonth);
     } catch (err) {
       console.error('Settings save error:', err);

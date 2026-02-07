@@ -10,7 +10,8 @@ import {
   getCurrentMonth,
   formatDateJP,
   exportTasksToCSV,
-  fireConfetti
+  fireConfetti,
+  getNowJST
 } from '@/lib/utils';
 import type { Task, DashboardSummary, MemberStats, Member, RankingPeriod } from '@/lib/types';
 import { ErrorDisplay } from './ErrorBoundary';
@@ -47,7 +48,7 @@ function RankingPeriodToggle({
   );
 }
 
-// メーターコンポーネント (v1.28: 100%超え対応 & 特別演出)
+// メーターコンポーネント
 function Meter({ 
   label, 
   completed, 
@@ -67,7 +68,6 @@ function Meter({
   const pendingPercent = calculatePercentage(completed + pending, target);
   const isGoalReached = completedPercent >= 100;
 
-  // 100%達成時に紙吹雪
   useEffect(() => {
     if (isGoalReached) {
       fireConfetti();
@@ -110,6 +110,7 @@ function Meter({
 
 // 月間完了集計カード
 function MonthlyCompletionCard({ count, totalAmount }: { count: number; totalAmount: number; }) {
+  const now = getNowJST();
   return (
     <div className="card p-5">
       <div className="flex items-center gap-3 mb-3">
@@ -118,7 +119,7 @@ function MonthlyCompletionCard({ count, totalAmount }: { count: number; totalAmo
         </div>
         <div>
           <h3 className="font-medium text-dark-200">今月の完了</h3>
-          <p className="text-xs text-dark-500">{new Date().getFullYear()}年{new Date().getMonth() + 1}月</p>
+          <p className="text-xs text-dark-500">{now.getFullYear()}年{now.getMonth() + 1}月</p>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -244,9 +245,10 @@ export function Dashboard() {
     try {
       const supabase = createClient();
       const currentMonth = getCurrentMonth();
-      const currentYear = new Date().getFullYear();
+      const now = getNowJST();
+      const currentYear = now.getFullYear();
 
-      // v1.31: 目標を配列で取得（Robust fetch）
+      // 目標の取得
       const { data: goalsData } = await supabase
         .from('monthly_goals')
         .select('*')
@@ -254,25 +256,40 @@ export function Dashboard() {
       
       const goals = goalsData && goalsData.length > 0 ? goalsData[0] : null;
 
+      // 月の開始日と終了日を計算 (JST基準)
       const startOfMonth = `${currentMonth}-01`;
-      const endOfMonth = new Date(parseInt(currentMonth.split('-')[0]), parseInt(currentMonth.split('-')[1]), 0).toISOString().split('T')[0];
+      const [y, m] = currentMonth.split('-').map(Number);
+      const lastDay = new Date(y, m, 0).getDate();
+      const endOfMonth = `${currentMonth}-${String(lastDay).padStart(2, '0')}`;
       
+      // タスクの取得 (重複を避けるため、ロジックを簡素化)
+      // ステータスが完了のものは、完了日が今月のもの。進行中のものは、期間が今月にかかっているもの。
       const { data: tasks, error: tasksError } = await supabase
         .from('tasks')
         .select('*, member:members(*)')
         .in('status', ['pending', 'completed'])
-        .or(`start_date.gte.${startOfMonth},scheduled_date.gte.${startOfMonth}`)
-        .or(`end_date.lte.${endOfMonth},scheduled_date.lte.${endOfMonth}`);
+        .or(`start_date.lte.${endOfMonth},scheduled_date.lte.${endOfMonth}`)
+        .or(`end_date.gte.${startOfMonth},scheduled_date.gte.${startOfMonth}`);
       
       if (tasksError) throw tasksError;
 
+      // 年間ランキング用
       const { data: yearlyTasks } = await supabase.from('tasks').select('*, member:members(*)').gte('completed_at', `${currentYear}-01-01`).lte('completed_at', `${currentYear}-12-31`).eq('status', 'completed');
       const { data: recentTasks } = await supabase.from('tasks').select('*').order('completed_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(5);
       const { data: allTasksData } = await supabase.from('tasks').select('*, member:members(*)').order('created_at', { ascending: false });
       const { data: membersData } = await supabase.from('members').select('*').order('created_at');
       
-      const completedTasks = tasks?.filter(t => t.status === 'completed') || [];
-      const pendingTasks = tasks?.filter(t => t.status === 'pending') || [];
+      // 今月分に絞り込み
+      const currentMonthTasks = (tasks || []).filter(t => {
+        const start = t.start_date || t.scheduled_date;
+        const end = t.end_date || t.scheduled_date;
+        if (!start || !end) return false;
+        // 期間が今月に重なっているか
+        return start <= endOfMonth && end >= startOfMonth;
+      });
+
+      const completedTasks = currentMonthTasks.filter(t => t.status === 'completed');
+      const pendingTasks = currentMonthTasks.filter(t => t.status === 'pending');
       
       setSummary({
         completedAmount: completedTasks.reduce((sum, t) => sum + (t.amount || 0), 0),
@@ -284,11 +301,21 @@ export function Dashboard() {
         recentActivities: recentTasks || [],
         monthlyCompletedCount: completedTasks.length,
       });
+
       setMemberStats((membersData || []).map(member => {
-        const mTasks = tasks?.filter(t => t.member_id === member.id) || [];
+        const mTasks = currentMonthTasks.filter(t => t.member_id === member.id);
         const mCompleted = mTasks.filter(t => t.status === 'completed');
-        return { member, totalAmount: mTasks.reduce((s, t) => s + (t.amount || 0), 0), completedAmount: mCompleted.reduce((s, t) => s + (t.amount || 0), 0), totalPoints: mTasks.reduce((s, t) => s + (t.points || 0), 0), completedPoints: mCompleted.reduce((s, t) => s + (t.points || 0), 0), taskCount: mTasks.length, completedTaskCount: mCompleted.length };
+        return { 
+          member, 
+          totalAmount: mTasks.reduce((s, t) => s + (t.amount || 0), 0), 
+          completedAmount: mCompleted.reduce((s, t) => s + (t.amount || 0), 0), 
+          totalPoints: mTasks.reduce((s, t) => s + (t.points || 0), 0), 
+          completedPoints: mCompleted.reduce((s, t) => s + (t.points || 0), 0), 
+          taskCount: mTasks.length, 
+          completedTaskCount: mCompleted.length 
+        };
       }));
+
       setYearlyMemberStats((membersData || []).map(member => {
         const mTasks = yearlyTasks?.filter(t => t.member_id === member.id) || [];
         return { member, totalAmount: mTasks.reduce((s, t) => s + (t.amount || 0), 0), completedAmount: mTasks.reduce((s, t) => s + (t.amount || 0), 0), totalPoints: mTasks.reduce((s, t) => s + (t.points || 0), 0), completedPoints: mTasks.reduce((s, t) => s + (t.points || 0), 0), taskCount: mTasks.length, completedTaskCount: mTasks.length };
@@ -332,7 +359,7 @@ export function Dashboard() {
       )}
 
       <RecentActivity tasks={filteredSummary.recentActivities} />
-      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.39</span></div>
+      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.40</span></div>
     </div>
   );
 }
