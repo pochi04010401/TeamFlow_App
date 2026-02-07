@@ -245,17 +245,35 @@ export function Dashboard() {
       const supabase = createClient();
       const currentMonth = getCurrentMonth();
       const currentYear = new Date().getFullYear();
-      const { data: goals } = await supabase.from('monthly_goals').select('*').eq('month', currentMonth).single();
+
+      // v1.31: 目標を配列で取得（Robust fetch）
+      const { data: goalsData } = await supabase
+        .from('monthly_goals')
+        .select('*')
+        .eq('month', currentMonth);
+      
+      const goals = goalsData && goalsData.length > 0 ? goalsData[0] : null;
+
       const startOfMonth = `${currentMonth}-01`;
       const endOfMonth = new Date(parseInt(currentMonth.split('-')[0]), parseInt(currentMonth.split('-')[1]), 0).toISOString().split('T')[0];
-      const { data: tasks, error: tasksError } = await supabase.from('tasks').select('*, member:members(*)').in('status', ['pending', 'completed']).or(`start_date.gte.${startOfMonth},scheduled_date.gte.${startOfMonth}`).or(`end_date.lte.${endOfMonth},scheduled_date.lte.${endOfMonth}`);
+      
+      const { data: tasks, error: tasksError } = await supabase
+        .from('tasks')
+        .select('*, member:members(*)')
+        .in('status', ['pending', 'completed'])
+        .or(`start_date.gte.${startOfMonth},scheduled_date.gte.${startOfMonth}`)
+        .or(`end_date.lte.${endOfMonth},scheduled_date.lte.${endOfMonth}`);
+      
       if (tasksError) throw tasksError;
+
       const { data: yearlyTasks } = await supabase.from('tasks').select('*, member:members(*)').gte('completed_at', `${currentYear}-01-01`).lte('completed_at', `${currentYear}-12-31`).eq('status', 'completed');
       const { data: recentTasks } = await supabase.from('tasks').select('*').order('completed_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(5);
       const { data: allTasksData } = await supabase.from('tasks').select('*, member:members(*)').order('created_at', { ascending: false });
       const { data: membersData } = await supabase.from('members').select('*').order('created_at');
+      
       const completedTasks = tasks?.filter(t => t.status === 'completed') || [];
       const pendingTasks = tasks?.filter(t => t.status === 'pending') || [];
+      
       setSummary({
         completedAmount: completedTasks.reduce((sum, t) => sum + (t.amount || 0), 0),
         pendingAmount: pendingTasks.reduce((sum, t) => sum + (t.amount || 0), 0),
@@ -314,8 +332,8 @@ export function Dashboard() {
       )}
 
       <RecentActivity tasks={filteredSummary.recentActivities} />
-      {/* バージョン表示 (v1.30) */}
-      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.30</span></div>
+      {/* バージョン表示 (v1.31) */}
+      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.31</span></div>
     </div>
   );
 }
