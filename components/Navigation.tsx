@@ -2,12 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Calendar, PlusCircle, Clock, BarChart2 } from 'lucide-react';
+import { Home, Calendar, PlusCircle, Clock } from 'lucide-react';
 
 const navItems = [
   { href: '/', label: 'ホーム', icon: Home },
   { href: '/schedule', label: 'スケジュール', icon: Calendar },
-  { href: '/analytics', label: '分析', icon: BarChart2 },
   { href: '/pending', label: '進行中', icon: Clock },
   { href: '/input', label: '登録', icon: PlusCircle },
 ];
@@ -35,8 +34,8 @@ export function Navigation() {
                   isActive ? 'bg-accent-primary/5 text-accent-primary' : 'text-dark-400'
                 }`}
               >
-                <Icon className={`w-5 h-5 mb-1 ${isActive ? 'scale-110' : ''}`} />
-                <span className={`text-[9px] font-bold ${isActive ? '' : 'text-dark-500'}`}>
+                <Icon className={`w-6 h-6 mb-1 ${isActive ? 'scale-110' : ''}`} />
+                <span className={`text-[10px] font-bold ${isActive ? '' : 'text-dark-500'}`}>
                   {item.label}
                 </span>
               </Link>

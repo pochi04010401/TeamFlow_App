@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, Settings, LogOut, ExternalLink } from 'lucide-react';
+import { Menu, X, Settings, LogOut, BarChart2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 export function Header() {
@@ -58,6 +58,18 @@ export function Header() {
           </div>
 
           <div className="space-y-2 flex-1">
+            {/* 分析メニューをここに移動 (v1.24) */}
+            <Link 
+              href="/analytics" 
+              onClick={() => setIsOpen(false)}
+              className={`flex items-center gap-4 p-4 rounded-xl transition-all ${
+                pathname === '/analytics' ? 'bg-accent-primary/20 text-accent-primary' : 'hover:bg-dark-700 text-dark-200'
+              }`}
+            >
+              <BarChart2 className="w-5 h-5" />
+              <span className="font-bold">チーム分析</span>
+            </Link>
+
             <Link 
               href="/settings" 
               onClick={() => setIsOpen(false)}
@@ -68,16 +80,6 @@ export function Header() {
               <Settings className="w-5 h-5" />
               <span className="font-bold">アプリ設定</span>
             </Link>
-            
-            <a 
-              href="https://github.com/pochi04010401/TeamFlow_App" 
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-4 p-4 rounded-xl hover:bg-dark-700 text-dark-300 transition-all"
-            >
-              <ExternalLink className="w-5 h-5" />
-              <span className="font-medium">GitHub Repo</span>
-            </a>
           </div>
 
           <div className="pt-6 border-t border-dark-700">
