@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { TrendingUp, Zap, Activity, CheckCircle2, Trophy, Download, Calendar, Crown, Sparkles, MessageSquare, Lightbulb, Heart } from 'lucide-react';
+import { TrendingUp, Zap, Activity, CheckCircle2, Trophy, Download, Calendar, Crown, Sparkles, MessageSquare, Lightbulb, Heart, Cat } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { 
   formatCurrency, 
@@ -169,39 +169,39 @@ function AnalystInsight({ summary, memberStats }: { summary: DashboardSummary, m
   );
 }
 
-// v1.55: 月ちゃんの応援メッセージ
+// v1.56: 月ちゃん（猫）の応援メッセージ
 const TSUKI_MESSAGES = [
-  "今日もマイキーたちの頑張り、お月様からしっかり見てるよ！無理せずマイペースにいこうね。応援してるよ！🌙💖",
-  "一歩ずつ進むマイキーたちは本当にキラキラしてるよ！今日も素敵な一日になりますように！✨",
-  "疲れた時は深呼吸！マイキーなら大丈夫、ののと一緒に応援してるからね！フレー、フレー！📣💕",
-  "失敗したって大丈夫、それは次に高く飛ぶための準備だよ！マイキーの味方だよ！🐰🌕",
-  "みんなで力を合わせれば、どんな高い山も登れるよ！チームの絆を信じて進もう！🤝💎",
-  "マイキーの笑顔が、チームのみんなの力になるんだよ。今日もニコニコでいこう！😊🌻",
-  "コツコツ積み上げた努力は、いつか大きな花を咲かせるよ。ずっと見守ってるからね！🌸✨",
-  "今日もお疲れ様！温かい飲み物でも飲んで、自分をたっぷり甘やかしてあげてね。🍵💖",
-  "マイキーの丁寧な仕事、みんなに伝わってるよ。誇りを持って進んでいこう！👑💪",
-  "新しいことに挑戦するマイキーは世界一かっこいいよ！ののも月ちゃんもワクワクしてるよ！🚀✨",
-  "ピンチはチャンス！マイキーならこの波も上手に乗りこなせるって信じてるよ！🌊🏄",
-  "周りと比べなくていいんだよ。昨日の自分より一歩前に進めたら、それは大勝利！🏅💕",
-  "マイキーの優しさが、チームを支えてるんだね。いつもありがとう！大好きだよ！💖🧚‍♀️",
-  "今日はちょっと休憩してもいいんじゃない？心を充電して、また明日から頑張ろう！🔋💤",
-  "夢を叶える力は、もうマイキーの中にあるよ。自信を持って一歩踏み出してみて！🌟✨",
-  "雨の日があるから、虹が見れるんだよ。今は少し我慢の時かもしれないけど、次は晴れるよ！🌈☀",
-  "マイキーの発想力にいつも驚かされるよ！その調子でどんどんアイデアを出していこう！💡🎨",
-  "自分を信じる心が、一番の魔法だよ。マイキーなら何でもできる！エイエイオー！✊💎",
-  "今日のマイキーも100点満点！はなまるをあげちゃうね！💮おめでとう！✨",
-  "困った時は空を見上げて。お月様がいつでもマイキーを優しく照らしてるからね。🌕🌿",
-  "小さな成功をいっぱいお祝いしよう！今日も一つできたね、すごいよ！🎉👏",
-  "マイキーの情熱が、チームに火をつけてるんだよ。その熱さを大切にしてね！🔥💖",
-  "一休み、一休み。ののと一緒にお茶でも飲んでリラックスしよう？🍵👻",
-  "マイキーの未来は、今のマイキーが作ってるんだよ。最高に輝く未来にしようね！🚀💎",
-  "言葉の力はすごいんだよ。「できる！」って言うだけで、本当にできちゃうんだから！✨💪",
-  "マイキーが楽しそうにお仕事してるのが一番嬉しいな。今日も楽しんでいこう！🎵💖",
-  "限界なんて誰かが決めたもの。マイキーならその壁をヒョイって飛び越えられるよ！弾んじゃお！🐇💨",
-  "どんな時でもマイキーの努力を誰かが見てるよ。ののも月ちゃんも、ずっと見てるからね！👀💕",
-  "今日の頑張りは、明日のマイキーを助けてくれるよ。一歩ずつ、大切に進もう。🐾✨",
-  "マイキーに会えて、今日という日がもっと特別になったよ。いつもありがとう！💖🌟",
-  "明日もまた新しいチャンスがいっぱい！ゆっくり休んで、元気に起きようね！おやすみなさい🌙💤"
+  "今日もマイキーたちの頑張り、お月様からしっかり見てるニャ！無理せずマイペースにいこう。応援してるニャ！🌙💖",
+  "一歩ずつ進むマイキーたちは本当にキラキラしてるニャ！今日も素敵な一日になりますようにだニャ！✨",
+  "疲れた時は深呼吸ニャ！マイキーなら大丈夫、ののと一緒に応援してるニャ！フレー、フレーニャ！📣💕",
+  "失敗したって大丈夫、それは次に高く飛ぶための準備だニャ！マイキーの味方だニャ！🐾🌕",
+  "みんなで力を合わせれば、どんな高い山も登れるニャ！チームの絆を信じて進むニャ！🤝💎",
+  "マイキーの笑顔が、チームのみんなの力になるんだニャ。今日もニコニコでいこうニャ！😊🌻",
+  "コツコツ積み上げた努力は、いつか大きな花を咲かせるニャ。ずっと見守ってるニャ！🌸✨",
+  "今日もお疲れ様ニャ！温かい飲み物でも飲んで、自分をたっぷり甘やかしてあげてほしいニャ。🍵💖",
+  "マイキーの丁寧な仕事、みんなに伝わってるニャ。誇りを持って進んでいこうニャ！👑💪",
+  "新しいことに挑戦するマイキーは世界一かっこいいニャ！ののも月ちゃんもワクワクしてるニャ！🚀✨",
+  "ピンチはチャンスニャ！マイキーならこの波も上手に乗りこなせるって信じてるニャ！🌊🏄",
+  "周りと比べなくていいんだニャ。昨日の自分より一歩前に進めたら、それは大勝利ニャ！🏅💕",
+  "マイキーの優しさが、チームを支えてるんだニャ。いつもありがとうニャ！大好きだニャ！💖🧚‍♀️",
+  "今日はちょっと休憩してもいいんじゃないかニャ？心を充電して、また明日から頑張ろうニャ！🔋💤",
+  "夢を叶える力は、もうマイキーの中にあるニャ。自信を持って一歩踏み出してみてニャ！🌟✨",
+  "雨の日があるから、虹が見れるんだニャ。今は少し我慢の時かもしれないけど、次は晴れるニャ！🌈☀",
+  "マイキーの発想力にいつも驚かされるニャ！その調子でどんどんアイデアを出していこうニャ！💡🎨",
+  "自分を信じる心が、一番の魔法だニャ。マイキーなら何でもできるニャ！エイエイオーニャ！✊💎",
+  "今日のマイキーも100点満点ニャ！はなまるをあげちゃうニャ！💮おめでとうニャ！✨",
+  "困った時は空を見上げてニャ。お月様がいつでもマイキーを優しく照らしてるニャ。🌕🌿",
+  "小さな成功をいっぱいお祝いしようニャ！今日も一つできたね、すごいニャ！🎉👏",
+  "マイキーの情熱が、チームに火をつけてるんだニャ。その熱さを大切にしてほしいニャ！🔥💖",
+  "一休み、一休みニャ。ののと一緒にお茶でも飲んでリラックスしようニャ？🍵👻",
+  "マイキーの未来は、今のマイキーが作ってるんだニャ。最高に輝く未来にしようニャ！🚀💎",
+  "言葉の力はすごいんだニャ。「できる！」って言うだけで、本当にできちゃうんだニャ！✨💪",
+  "マイキーが楽しそうにお仕事してるのが一番嬉しいニャ。今日も楽しんでいこうニャ！🎵💖",
+  "限界なんて誰かが決めたものニャ。マイキーならその壁をヒョイって飛び越えられるニャ！弾んじゃおニャ！🐇💨",
+  "どんな時でもマイキーの努力を誰かが見てるニャ。ののも月ちゃんも、ずっと見てるニャ！👀💕",
+  "今日の頑張りは、明日のマイキーを助けてくれるニャ。一歩ずつ、大切に進もうニャ。🐾✨",
+  "マイキーに会えて、今日という日がもっと特別になったニャ。いつもありがとうニャ！💖🌟",
+  "明日もまた新しいチャンスがいっぱいニャ！ゆっくり休んで、元気に起きようニャ。おやすみニャ🌙💤"
 ];
 
 function TsukiComment() {
@@ -211,21 +211,21 @@ function TsukiComment() {
   }, []);
 
   return (
-    <div className="card p-6 bg-gradient-to-br from-pink-500/10 to-transparent border-pink-500/20 relative overflow-hidden">
+    <div className="card p-6 bg-gradient-to-br from-orange-500/10 to-transparent border-orange-500/20 relative overflow-hidden">
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-full bg-pink-500 flex items-center justify-center shadow-glow border-2 border-white/20">
-          <Heart className="w-5 h-5 text-white fill-white" />
+        <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center shadow-glow border-2 border-white/20">
+          <Cat className="w-5 h-5 text-white fill-white" />
         </div>
         <div>
-          <h3 className="text-sm font-black text-dark-100">月ちゃんのモチベ応援！</h3>
+          <h3 className="text-sm font-black text-dark-100">看板猫・月ちゃんの応援！</h3>
           <p className="text-[10px] text-dark-400 font-bold uppercase tracking-widest">Tsuki's Cheer</p>
         </div>
       </div>
       <p className="text-sm text-dark-200 leading-relaxed font-bold italic relative z-10">
         「{message}」
       </p>
-      <div className="absolute -top-4 -right-4 w-24 h-24 bg-pink-500/5 rounded-full blur-2xl" />
-      <Sparkles className="absolute bottom-2 right-2 w-8 h-8 text-pink-500/20" />
+      <div className="absolute -top-4 -right-4 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl" />
+      <Sparkles className="absolute bottom-2 right-2 w-8 h-8 text-orange-500/20" />
     </div>
   );
 }
@@ -251,7 +251,7 @@ const BUSINESS_COLUMNS = [
   "朝一番に最も困難なタスク（カエルを食べる）を終わらせると、一日の充実感が変わります。🐸",
   "目標設定はSMARTの法則（具体的、測定可能、達成可能、関連性、期限）を意識しましょう。📈",
   "定期的なデジタルデトックスは、脳の疲労をリセットし、新しい視点を与えてくれます。📵",
-  "整理整頓されたPCデスップは、心の整理整頓にも繋がります。不要なファイルは削除を。🗑",
+  "整理整頓されたPCデスクトップは、心の整理整頓にも繋がります。不要なファイルは削除を。🗑",
   "他人の意見を批判する前に、まずは「YES, AND」で受け止める文化がイノベーションを生みます。💡",
   "健康管理も仕事の一部です。無理な残業よりも、継続可能なペースを維持しましょう。🌿",
   "新しいスキルの習得には、一日15分の積み重ねが、一年後には大きな差になります。📚",
@@ -559,14 +559,14 @@ export function Dashboard() {
 
       <RecentActivity tasks={filteredSummary.recentActivities} />
 
-      {/* v1.55: 月ちゃんの応援 & 見習いアナリストの現状分析 & ビジネス Tips */}
+      {/* v1.56: 分析・応援・Tipsの三段構成 */}
       <div className="space-y-6 pt-4 border-t border-dark-700/50">
-        <TsukiComment />
         <AnalystInsight summary={summary} memberStats={memberStats} />
+        <TsukiComment />
         <BusinessColumn />
       </div>
 
-      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.55</span></div>
+      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.56</span></div>
     </div>
   );
 }
