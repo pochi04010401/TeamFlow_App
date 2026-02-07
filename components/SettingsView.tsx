@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings, Target, Save, Loader2, Calendar, DollarSign, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Settings, Target, Save, Loader2, Calendar, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getCurrentMonth, formatNumber } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -33,7 +33,6 @@ export function SettingsView() {
           target_points: data.target_points
         });
       } else {
-        // デフォルト値
         setGoalData({ target_amount: 10000, target_points: 1000 });
       }
     } catch (err) {
@@ -53,16 +52,35 @@ export function SettingsView() {
     try {
       const supabase = createClient();
       
-      // UPSERT (v1.28: 確実にmonthカラムでの重複チェックを行う)
-      const { error } = await supabase
+      // v1.29: より確実な「取得してから更新・挿入」パターンに変更（42P10エラー対策）
+      const { data: existing } = await supabase
         .from('monthly_goals')
-        .upsert({
-          month: selectedMonth,
-          target_amount: goalData.target_amount * 1000,
-          target_points: goalData.target_points
-        }, { onConflict: 'month' });
+        .select('id')
+        .eq('month', selectedMonth)
+        .single();
 
-      if (error) throw error;
+      if (existing) {
+        // 更新
+        const { error } = await supabase
+          .from('monthly_goals')
+          .update({
+            target_amount: goalData.target_amount * 1000,
+            target_points: goalData.target_points
+          })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        // 新規挿入
+        const { error } = await supabase
+          .from('monthly_goals')
+          .insert([{
+            month: selectedMonth,
+            target_amount: goalData.target_amount * 1000,
+            target_points: goalData.target_points
+          }]);
+        if (error) throw error;
+      }
+
       toast.success(`${selectedMonth}の目標を保存しました！`);
     } catch (err) {
       console.error('Settings save error:', err);
@@ -84,24 +102,16 @@ export function SettingsView() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in pb-32 px-4">
-      {/* ヘッダー */}
+    <div className="space-y-6 animate-fade-in pb-32 px-4 text-dark-100">
       <div className="text-center py-4">
         <div className="w-12 h-12 bg-accent-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-3 text-accent-primary">
-          <Settings className="w-6 h-6" />
+          <Target className="w-6 h-6" />
         </div>
-        <h1 className="text-2xl font-black text-dark-100">アプリ設定</h1>
-        <p className="text-sm text-dark-500 mt-1">目標値の管理・システム設定</p>
+        <h1 className="text-2xl font-black">目標管理</h1>
+        <p className="text-sm text-dark-500 mt-1">月間目標の数値を設定します</p>
       </div>
 
-      {/* 月間目標設定 */}
       <div className="card p-6 space-y-6">
-        <div className="flex items-center gap-2 border-b border-dark-700 pb-4">
-          <Target className="w-5 h-5 text-accent-primary" />
-          <h2 className="text-lg font-bold text-dark-100">月間目標の設定</h2>
-        </div>
-
-        {/* 月選択 */}
         <div className="flex items-center justify-between bg-dark-700/50 p-2 rounded-xl">
           <button onClick={() => changeMonth(-1)} className="p-2 hover:text-accent-primary transition-colors">
             <ChevronLeft className="w-5 h-5" />
@@ -122,15 +132,15 @@ export function SettingsView() {
             <div className="space-y-2">
               <label className="text-xs font-black uppercase text-dark-500 tracking-widest ml-1">売上目標 (千円)</label>
               <div className="relative flex items-center gap-3">
-                <div className="flex-1">
-                  <input
-                    type="number"
-                    value={goalData.target_amount}
-                    onChange={(e) => setGoalData({ ...goalData, target_amount: Number(e.target.value) })}
-                    className="input-premium px-4 w-full"
-                  />
-                </div>
-                <span className="text-xs font-bold text-dark-400 opacity-50">約{formatNumber(goalData.target_amount * 1000)}円</span>
+                <input
+                  type="number"
+                  value={goalData.target_amount}
+                  onChange={(e) => setGoalData({ ...goalData, target_amount: Number(e.target.value) })}
+                  className="input-premium px-4 flex-1"
+                />
+                <span className="text-xs font-bold text-dark-400 opacity-50 whitespace-nowrap">
+                  = {formatNumber(goalData.target_amount * 1000)}円
+                </span>
               </div>
             </div>
 
@@ -152,20 +162,10 @@ export function SettingsView() {
               disabled={loading}
               className="btn-primary w-full h-14 text-lg font-bold shadow-glow mt-4 flex items-center justify-center gap-3"
             >
-              {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Save className="w-6 h-6" /> 設定を保存する</>}
+              {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Save className="w-6 h-6" /> この月の目標を保存</>}
             </button>
           </div>
         )}
-      </div>
-
-      {/* その他情報 */}
-      <div className="card p-5 opacity-60">
-        <h3 className="text-xs font-bold text-dark-400 uppercase tracking-widest mb-2">システム情報</h3>
-        <div className="space-y-1 text-[10px] text-dark-500 font-mono">
-          <p>TimeZone: Asia/Tokyo (JST)</p>
-          <p>Database: Supabase PostgreSQL</p>
-          <p>Status: Ready</p>
-        </div>
       </div>
     </div>
   );
