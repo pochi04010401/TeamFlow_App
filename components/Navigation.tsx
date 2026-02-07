@@ -1,19 +1,24 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Calendar, PlusCircle, Clock, BarChart2, Target } from 'lucide-react';
+import { Home, Calendar, PlusCircle, Clock, BarChart2, Target, ChevronUp } from 'lucide-react';
 
-const navItems = [
+const mainNavItems = [
   { href: '/', label: 'ホーム', icon: Home },
-  { href: '/schedule', label: 'スケ', icon: Calendar }, // 名前を短縮
-  { href: '/analytics', label: '分析', icon: BarChart2 },
+  { href: '/schedule', label: 'スケジュール', icon: Calendar },
   { href: '/pending', label: '進行中', icon: Clock },
   { href: '/input', label: '登録', icon: PlusCircle },
-  { href: '/settings', label: '目標', icon: Target }, // v1.32: 追加
+];
+
+const subNavItems = [
+  { href: '/analytics', label: 'チーム分析', icon: BarChart2 },
+  { href: '/settings', label: '目標管理', icon: Target },
 ];
 
 export function Navigation() {
+  const [showSubMenu, setShowSubMenu] = useState(false);
   const pathname = usePathname();
 
   if (pathname === '/login' || pathname === '/logout') {
@@ -22,9 +27,33 @@ export function Navigation() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-dark-700/50">
-      <div className="w-full overflow-hidden">
-        <div className="flex items-center justify-around w-full">
-          {navItems.map((item) => {
+      {/* サブメニュー (v1.33) */}
+      <div 
+        className={`absolute bottom-full right-4 mb-4 w-48 bg-dark-800 border border-dark-700 rounded-2xl shadow-2xl transition-all duration-300 transform ${
+          showSubMenu ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-95 pointer-events-none'
+        }`}
+      >
+        <div className="p-2 space-y-1">
+          {subNavItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setShowSubMenu(false)}
+              className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
+                pathname === item.href ? 'bg-accent-primary/20 text-accent-primary' : 'hover:bg-dark-700 text-dark-200'
+              }`}
+            >
+              <item.icon className="w-5 h-5" />
+              <span className="text-sm font-bold">{item.label}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* メインメニュー */}
+      <div className="w-full">
+        <div className="flex items-center justify-between">
+          {mainNavItems.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
             
@@ -32,20 +61,42 @@ export function Navigation() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => setShowSubMenu(false)}
                 className={`flex-1 flex flex-col items-center justify-center py-3 transition-all duration-200 ${
-                  isActive ? 'bg-accent-primary/10 text-accent-primary' : 'text-dark-400 active:bg-dark-700'
+                  isActive ? 'bg-accent-primary/10 text-accent-primary' : 'text-dark-400'
                 }`}
               >
                 <Icon className={`w-5 h-5 mb-1 ${isActive ? 'scale-110' : ''}`} />
-                <span className={`text-[8px] font-black tracking-tighter ${isActive ? '' : 'text-dark-500'}`}>
+                <span className={`text-[9px] font-bold ${isActive ? '' : 'text-dark-500'}`}>
                   {item.label}
                 </span>
               </Link>
             );
           })}
+
+          {/* 「その他」ボタン (v1.33) */}
+          <button
+            onClick={() => setShowSubMenu(!showSubMenu)}
+            className={`flex-1 flex flex-col items-center justify-center py-3 transition-all duration-200 ${
+              showSubMenu || subNavItems.some(i => i.href === pathname)
+                ? 'text-accent-primary' 
+                : 'text-dark-400'
+            }`}
+          >
+            <ChevronUp className={`w-5 h-5 mb-1 transition-transform ${showSubMenu ? 'rotate-180' : ''}`} />
+            <span className="text-[9px] font-bold">その他</span>
+          </button>
         </div>
       </div>
       <div className="h-safe-area-inset-bottom bg-dark-900/80" />
+
+      {/* サブメニューを閉じるための全画面レイヤー */}
+      {showSubMenu && (
+        <div 
+          className="fixed inset-0 -z-10" 
+          onClick={() => setShowSubMenu(false)}
+        />
+      )}
     </nav>
   );
 }
