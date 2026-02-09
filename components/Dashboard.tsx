@@ -19,6 +19,7 @@ import { ErrorDisplay } from './ErrorBoundary';
 import { MemberFilter } from './MemberFilter';
 import { toast } from 'sonner';
 import { BusinessColumn } from './BusinessColumn';
+import { AnalystInsight } from './AnalystInsight';
 
 // ランキング期間切り替え
 function RankingPeriodToggle({
@@ -471,12 +472,13 @@ export function Dashboard() {
 
       <RecentActivity tasks={filteredSummary.recentActivities} />
 
-      {/* v1.58: ビジネスTipsのみ表示（アナリストとツキちゃんは他ページへ移動） */}
+      {/* v1.60: 分析・Tipsの構成（ツキちゃん削除） */}
       <div className="space-y-6 pt-4 border-t border-dark-700/50">
+        <AnalystInsight summary={summary} memberStats={memberStats} />
         <BusinessColumn />
       </div>
 
-      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.59</span></div>
+      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.60</span></div>
     </div>
   );
 }
