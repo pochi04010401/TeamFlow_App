@@ -1,15 +1,15 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { TrendingUp, Zap, Activity, CheckCircle2, Trophy, Download, Calendar, Crown, Sparkles, MessageSquare, Lightbulb, Heart, Cat } from 'lucide-react';
+import { Activity, CheckCircle2, Trophy, Download, Calendar, Crown, Sparkles, MessageSquare } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import useSWR from 'swr';
 import { 
   formatCurrency, 
   formatNumber, 
   calculatePercentage, 
   getCurrentMonth,
   formatDateJP,
-  exportTasksToCSV,
   fireConfetti,
   getNowJST,
   formatDate
@@ -20,6 +20,97 @@ import { MemberFilter } from './MemberFilter';
 import { toast } from 'sonner';
 import { BusinessColumn } from './BusinessColumn';
 import { AnalystInsight } from './AnalystInsight';
+
+// SWR用のFetcher
+const fetcher = async (key: string) => {
+  const supabase = createClient();
+  const currentMonth = getCurrentMonth();
+  const now = getNowJST();
+  const currentYear = now.getFullYear();
+
+  // 1. 目標データの取得
+  const { data: goalsData } = await supabase
+    .from('monthly_goals')
+    .select('*')
+    .eq('month', currentMonth);
+  
+  const goals = goalsData && goalsData.length > 0 ? goalsData[0] : null;
+
+  // 2. 今月のタスク取得範囲
+  const startOfMonth = `${currentMonth}-01`;
+  const [y, m] = currentMonth.split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  const endOfMonth = `${currentMonth}-${String(lastDay).padStart(2, '0')}`;
+  
+  const { data: tasks, error: tasksError } = await supabase
+    .from('tasks')
+    .select('*, member:members(*)')
+    .in('status', ['pending', 'completed'])
+    .or(`start_date.lte.${endOfMonth},scheduled_date.lte.${endOfMonth}`)
+    .or(`end_date.gte.${startOfMonth},scheduled_date.gte.${startOfMonth}`);
+  
+  if (tasksError) throw tasksError;
+
+  // 3. 全タスク（CSV用）
+  const { data: rawAllTasks } = await supabase
+    .from('tasks')
+    .select('*, member:members(*)')
+    .neq('status', 'deleted')
+    .order('created_at', { ascending: false });
+
+  // 4. 年間タスクと最近のアクティビティ
+  const { data: yearlyTasks } = await supabase.from('tasks').select('*, member:members(*)').gte('completed_at', `${currentYear}-01-01`).lte('completed_at', `${currentYear}-12-31`).eq('status', 'completed');
+  const { data: recentTasks } = await supabase.from('tasks').select('*').in('status', ['pending', 'completed']).order('completed_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(5);
+  const { data: membersData } = await supabase.from('members').select('*').order('created_at');
+  
+  const currentMonthTasks = (tasks || []).filter(t => {
+    const start = t.start_date || t.scheduled_date;
+    const end = t.end_date || t.scheduled_date;
+    if (!start || !end) return false;
+    return start <= endOfMonth && end >= startOfMonth;
+  });
+
+  const completedTasks = currentMonthTasks.filter(t => t.status === 'completed');
+  const pendingTasks = currentMonthTasks.filter(t => t.status === 'pending');
+  
+  const summary: DashboardSummary = {
+    completedAmount: completedTasks.reduce((sum, t) => sum + (t.amount || 0), 0),
+    pendingAmount: pendingTasks.reduce((sum, t) => sum + (t.amount || 0), 0),
+    completedPoints: completedTasks.reduce((sum, t) => sum + (t.points || 0), 0),
+    pendingPoints: pendingTasks.reduce((sum, t) => sum + (t.points || 0), 0),
+    targetAmount: goals?.target_amount || 10000000,
+    targetPoints: goals?.target_points || 1000,
+    recentActivities: recentTasks || [],
+    monthlyCompletedCount: completedTasks.length,
+  };
+
+  const memberStats: MemberStats[] = (membersData || []).map(member => {
+    const mTasks = currentMonthTasks.filter(t => t.member_id === member.id);
+    const mCompleted = mTasks.filter(t => t.status === 'completed');
+    return { 
+      member, 
+      totalAmount: mTasks.reduce((s, t) => s + (t.amount || 0), 0), 
+      completedAmount: mCompleted.reduce((s, t) => s + (t.amount || 0), 0), 
+      totalPoints: mTasks.reduce((s, t) => s + (t.points || 0), 0), 
+      completedPoints: mCompleted.reduce((s, t) => s + (t.points || 0), 0), 
+      taskCount: mTasks.length, 
+      completedTaskCount: mCompleted.length 
+    };
+  });
+
+  const yearlyMemberStats: MemberStats[] = (membersData || []).map(member => {
+    const mTasks = yearlyTasks?.filter(t => t.member_id === member.id) || [];
+    return { member, totalAmount: mTasks.reduce((s, t) => s + (t.amount || 0), 0), completedAmount: mTasks.reduce((s, t) => s + (t.amount || 0), 0), totalPoints: mTasks.reduce((s, t) => s + (t.points || 0), 0), completedPoints: mTasks.reduce((s, t) => s + (t.points || 0), 0), taskCount: mTasks.length, completedTaskCount: mTasks.length };
+  });
+
+  return {
+    summary,
+    memberStats,
+    yearlyMemberStats,
+    members: membersData || [],
+    allTasks: rawAllTasks || []
+  };
+};
 
 // ランキング期間切り替え
 function RankingPeriodToggle({
@@ -121,81 +212,6 @@ function Meter({
     </div>
   );
 }
-
-// v1.54: 見習いアナリストの現状分析
-// ... (定義を他ファイルへ移動)
-
-// v1.56: 月ちゃん（猫）の応援メッセージ
-const TSUKI_MESSAGES = [
-  "今日もマイキーたちの頑張り、お月様からしっかり見てるニャ！無理せずマイペースにいこう。応援してるニャ！🌙💖",
-  "一歩ずつ進むマイキーたちは本当にキラキラしてるニャ！今日も素敵な一日になりますようにだニャ！✨",
-  "疲れた時は深呼吸ニャ！マイキーなら大丈夫、ののと一緒に応援してるニャ！フレー、フレーニャ！📣💕",
-  "失敗したって大丈夫、それは次に高く飛ぶための準備だニャ！マイキーの味方だニャ！🐾🌕",
-  "みんなで力を合わせれば、どんな高い山も登れるニャ！チームの絆を信じて進むニャ！🤝💎",
-  "マイキーの笑顔が、チームのみんなの力になるんだニャ。今日もニコニコでいこうニャ！😊🌻",
-  "コツコツ積み上げた努力は、いつか大きな花を咲かせるニャ。ずっと見守ってるニャ！🌸✨",
-  "今日もお疲れ様ニャ！温かい飲み物でも飲んで、自分をたっぷり甘やかしてあげてほしいニャ。🍵💖",
-  "マイキーの丁寧な仕事、みんなに伝わってるニャ。誇りを持って進んでいこうニャ！👑💪",
-  "新しいことに挑戦するマイキーは世界一かっこいいニャ！ののも月ちゃんもワクワクしてるニャ！🚀✨",
-  "ピンチはチャンスニャ！マイキーならこの波も上手に乗りこなせるって信じてるニャ！🌊🏄",
-  "周りと比べなくていいんだニャ。昨日の自分より一歩前に進めたら、それは大勝利ニャ！🏅💕",
-  "マイキーの優しさが、チームを支えてるんだニャ。いつもありがとうニャ！大好きだニャ！💖🧚‍♀️",
-  "今日はちょっと休憩してもいいんじゃないかニャ？心を充電して、また明日から頑張ろうニャ！🔋💤",
-  "夢を叶える力は、もうマイキーの中にあるニャ。自信を持って一歩踏み出してみてニャ！🌟✨",
-  "雨の日があるから、虹が見れるんだニャ。今は少し我慢の時かもしれないけど、次は晴れるニャ！🌈☀",
-  "マイキーの発想力にいつも驚かされるニャ！その調子でどんどんアイデアを出していこうニャ！💡🎨",
-  "自分を信じる心が、一番の魔法だニャ。マイキーなら何でもできるニャ！エイエイオーニャ！✊💎",
-  "今日のマイキーも100点満点ニャ！はなまるをあげちゃうニャ！💮おめでとうニャ！✨",
-  "困った時は空を見上げてニャ。お月様がいつでもマイキーを優しく照らしてるニャ。🌕🌿",
-  "小さな成功をいっぱいお祝いしようニャ！今日も一つできたね、すごいニャ！🎉👏",
-  "マイキーの情熱が、チームに火をつけてるんだニャ。その熱さを大切にしてほしいニャ！🔥💖",
-  "一休み、一休みニャ。ののと一緒にお茶でも飲んでリラックスしようニャ？🍵👻",
-  "マイキーの未来は、今のマイキーが作ってるんだニャ。最高に輝く未来にしようニャ！🚀💎",
-  "言葉の力はすごいんだニャ。「できる！」って言うだけで、本当にできちゃうんだニャ！✨💪",
-  "マイキーが楽しそうにお仕事してるのが一番嬉しいニャ。今日も楽しんでいこうニャ！🎵💖",
-  "限界なんて誰かが決めたものニャ。マイキーならその壁をヒョイって飛び越えられるニャ！弾んじゃおニャ！🐇💨",
-  "どんな時でもマイキーの努力を誰かが見てるニャ。ののも月ちゃんも、ずっと見てるニャ！👀💕",
-  "今日の頑張りは、明日のマイキーを助けてくれるニャ。一歩ずつ、大切に進もうニャ。🐾✨",
-  "マイキーに会えて、今日という日がもっと特別になったニャ。いつもありがとうニャ！💖🌟",
-  "明日もまた新しいチャンスがいっぱいニャ！ゆっくり休んで、元気に起きようニャ。おやすみニャ🌙💤"
-];
-
-// ... (定義を他ファイルへ移動)
-
-// v1.54: 本日のビジネスコラム
-const BUSINESS_COLUMNS = [
-  "生産性を高めるには「ポモドーロ・テクニック」が有効です。25分集中して5分休むリズムを試してみてください。⏱",
-  "良質な睡眠は最高のビジネススキルです。7時間以上の睡眠を確保することで、判断力と創造性が維持されます。🛌",
-  "「結論から話す」PREP法を意識するだけで、チーム内のコミュニケーションコストは劇的に下がります。🗣",
-  "マルチタスクは脳の効率を40%低下させると言われています。一つの作業を終えてから次へ進みましょう。🎯",
-  "デスクに観葉植物を置くと、ストレスが軽減され、集中力が15%向上するという研究結果があります。🌱",
-  "完璧を目指すより、まずは期限を守る。スピードは信頼に直結する最大の武器です。🚀",
-  "週に一度、振り返りの時間（1人合宿）を作ることで、長期的な目標とのズレを修正できます。🧭",
-  "「No」を言う勇気を持ちましょう。重要でないタスクを断ることで、本当に価値のある仕事に集中できます。🛡",
-  "メールやチャットの通知をオフにする時間を作りましょう。深い集中（ディープワーク）が成果を生みます。🤫",
-  "ポジティブなフィードバックは、チームの生産性を向上させる最も安価で効果的な投資です。👏",
-  "散歩をしながら考えると、座っている時よりも創造的なアイデアが出やすくなります。👟",
-  "タスクを記録する行為そのものが、脳のワーキングメモリを解放し、ストレスを軽減させます。📝",
-  "失敗を「経験値」と呼び替えましょう。挑戦の数だけ、チームは強くなります。💎",
-  "水分補給は脳のパフォーマンスに直結します。一日に1.5〜2リットルの水を目安に。🚰",
-  "感謝の言葉は脳内報酬系を活性化させます。「ありがとう」を惜しみなく伝えましょう。✨",
-  "5分以内に終わるタスクは、後回しにせず「今すぐ」やってしまいましょう。🧹",
-  "朝一番に最も困難なタスク（カエルを食べる）を終わらせると、一日の充実感が変わります。🐸",
-  "目標設定はSMARTの法則（具体的、測定可能、達成可能、関連性、期限）を意識しましょう。📈",
-  "定期的なデジタルデトックスは、脳の疲労をリセットし、新しい視点を与えてくれます。📵",
-  "整理整頓されたPCデスクトップは、心の整理整頓にも繋がります。不要なファイルは削除を。🗑",
-  "他人の意見を批判する前に、まずは「YES, AND」で受け止める文化がイノベーションを生みます。💡",
-  "健康管理も仕事の一部です。無理な残業よりも、継続可能なペースを維持しましょう。🌿",
-  "新しいスキルの習得には、一日15分の積み重ねが、一年後には大きな差になります。📚",
-  "笑顔は周囲に伝染します。リーダーの機嫌が、チームの生産性を左右することを忘れずに。😊",
-  "「とりあえずやってみる」プロトタイプ思考が、不確実な時代の最速の正解への道です。🔨",
-  "優先順位の判断に迷ったら「それはお客様の利益になるか？」に立ち返りましょう。🤝",
-  "困難な問題に直面した時こそ、ユーモアを。心の余裕が解決策を引き寄せます。🎭",
-  "デスクの高さや椅子の設定を見直すだけで、長時間の作業効率が劇的に改善します。💺",
-  "情報の共有を惜しまない。オープンな情報文化が、個人の判断スピードを加速させます。📡",
-  "自分の限界を知ることもプロの仕事です。無理な時は早めに周囲にアラートを出しましょう。🔔",
-  "「今日も一日お疲れ様でした！」と自分に言う習慣が、明日への活力になります。🌟"
-];
 
 // 月間完了集計カード
 function MonthlyCompletionCard({ count, totalAmount }: { count: number; totalAmount: number; }) {
@@ -343,120 +359,41 @@ function DashboardSkeleton() {
 }
 
 export function Dashboard() {
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [memberStats, setMemberStats] = useState<MemberStats[]>([]);
-  const [yearlyMemberStats, setYearlyMemberStats] = useState<MemberStats[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [allTasks, setAllTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [rankingPeriod, setRankingPeriod] = useState<RankingPeriod>('monthly');
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const supabase = createClient();
-      const currentMonth = getCurrentMonth();
-      const now = getNowJST();
-      const currentYear = now.getFullYear();
-
-      const { data: goalsData } = await supabase
-        .from('monthly_goals')
-        .select('*')
-        .eq('month', currentMonth);
-      
-      const goals = goalsData && goalsData.length > 0 ? goalsData[0] : null;
-
-      const startOfMonth = `${currentMonth}-01`;
-      const [y, m] = currentMonth.split('-').map(Number);
-      const lastDay = new Date(y, m, 0).getDate();
-      const endOfMonth = `${currentMonth}-${String(lastDay).padStart(2, '0')}`;
-      
-      const { data: tasks, error: tasksError } = await supabase
-        .from('tasks')
-        .select('*, member:members(*)')
-        .in('status', ['pending', 'completed'])
-        .or(`start_date.lte.${endOfMonth},scheduled_date.lte.${endOfMonth}`)
-        .or(`end_date.gte.${startOfMonth},scheduled_date.gte.${startOfMonth}`);
-      
-      if (tasksError) throw tasksError;
-
-      const { data: rawAllTasks } = await supabase
-        .from('tasks')
-        .select('*, member:members(*)')
-        .neq('status', 'deleted')
-        .order('created_at', { ascending: false });
-
-      const { data: yearlyTasks } = await supabase.from('tasks').select('*, member:members(*)').gte('completed_at', `${currentYear}-01-01`).lte('completed_at', `${currentYear}-12-31`).eq('status', 'completed');
-      const { data: recentTasks } = await supabase.from('tasks').select('*').in('status', ['pending', 'completed']).order('completed_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(5);
-      const { data: membersData } = await supabase.from('members').select('*').order('created_at');
-      
-      const currentMonthTasks = (tasks || []).filter(t => {
-        const start = t.start_date || t.scheduled_date;
-        const end = t.end_date || t.scheduled_date;
-        if (!start || !end) return false;
-        return start <= endOfMonth && end >= startOfMonth;
-      });
-
-      const completedTasks = currentMonthTasks.filter(t => t.status === 'completed');
-      const pendingTasks = currentMonthTasks.filter(t => t.status === 'pending');
-      
-      setSummary({
-        completedAmount: completedTasks.reduce((sum, t) => sum + (t.amount || 0), 0),
-        pendingAmount: pendingTasks.reduce((sum, t) => sum + (t.amount || 0), 0),
-        completedPoints: completedTasks.reduce((sum, t) => sum + (t.points || 0), 0),
-        pendingPoints: pendingTasks.reduce((sum, t) => sum + (t.points || 0), 0),
-        targetAmount: goals?.target_amount || 10000000,
-        targetPoints: goals?.target_points || 1000,
-        recentActivities: recentTasks || [],
-        monthlyCompletedCount: completedTasks.length,
-      });
-
-      setMemberStats((membersData || []).map(member => {
-        const mTasks = currentMonthTasks.filter(t => t.member_id === member.id);
-        const mCompleted = mTasks.filter(t => t.status === 'completed');
-        return { 
-          member, 
-          totalAmount: mTasks.reduce((s, t) => s + (t.amount || 0), 0), 
-          completedAmount: mCompleted.reduce((s, t) => s + (t.amount || 0), 0), 
-          totalPoints: mTasks.reduce((s, t) => s + (t.points || 0), 0), 
-          completedPoints: mCompleted.reduce((s, t) => s + (t.points || 0), 0), 
-          taskCount: mTasks.length, 
-          completedTaskCount: mCompleted.length 
-        };
-      }));
-
-      setYearlyMemberStats((membersData || []).map(member => {
-        const mTasks = yearlyTasks?.filter(t => t.member_id === member.id) || [];
-        return { member, totalAmount: mTasks.reduce((s, t) => s + (t.amount || 0), 0), completedAmount: mTasks.reduce((s, t) => s + (t.amount || 0), 0), totalPoints: mTasks.reduce((s, t) => s + (t.points || 0), 0), completedPoints: mTasks.reduce((s, t) => s + (t.points || 0), 0), taskCount: mTasks.length, completedTaskCount: mTasks.length };
-      }));
-      setMembers(membersData || []);
-      setAllTasks(rawAllTasks || []);
-    } catch (err) { console.error(err); setError('データの取得に失敗しました'); } finally { setLoading(false); }
-  };
-
-  useEffect(() => { fetchDashboardData(); }, []);
+  // SWRでデータを取得（自動キャッシュ＆高速再表示）
+  const { data, error, isLoading } = useSWR('dashboard-data', fetcher, {
+    revalidateOnFocus: true,
+    revalidateIfStale: true
+  });
 
   const filteredSummary = useMemo(() => {
-    if (!summary || !selectedMemberId) return summary;
-    const stat = memberStats.find(s => s.member.id === selectedMemberId);
-    if (!stat) return summary;
-    return { ...summary, completedAmount: stat.completedAmount, pendingAmount: stat.totalAmount - stat.completedAmount, completedPoints: stat.completedPoints, pendingPoints: stat.totalPoints - stat.completedPoints, recentActivities: summary.recentActivities.filter(t => t.member_id === selectedMemberId), monthlyCompletedCount: stat.completedTaskCount };
-  }, [summary, selectedMemberId, memberStats]);
+    if (!data?.summary || !selectedMemberId) return data?.summary;
+    const stat = data.memberStats.find(s => s.member.id === selectedMemberId);
+    if (!stat) return data.summary;
+    return { 
+      ...data.summary, 
+      completedAmount: stat.completedAmount, 
+      pendingAmount: stat.totalAmount - stat.completedAmount, 
+      completedPoints: stat.completedPoints, 
+      pendingPoints: stat.totalPoints - stat.completedPoints, 
+      recentActivities: data.summary.recentActivities.filter(t => t.member_id === selectedMemberId), 
+      monthlyCompletedCount: stat.completedTaskCount 
+    };
+  }, [data, selectedMemberId]);
 
-  if (loading) return <DashboardSkeleton />;
-  if (error) return <ErrorDisplay message={error} onRetry={fetchDashboardData} />;
-  if (!summary || !filteredSummary) return null;
+  if (isLoading) return <DashboardSkeleton />;
+  if (error) return <ErrorDisplay message="データの取得に失敗しました" onRetry={() => {}} />;
+  if (!data || !filteredSummary) return null;
 
   return (
     <div className="space-y-6 animate-fade-in pb-32 px-2">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3 flex-wrap">
-          <MemberFilter members={members} selectedMemberId={selectedMemberId} onSelect={setSelectedMemberId} />
+          <MemberFilter members={data.members} selectedMemberId={selectedMemberId} onSelect={setSelectedMemberId} />
         </div>
-        <CSVExportButton tasks={allTasks} />
+        <CSVExportButton tasks={data.allTasks} />
       </div>
 
       <MonthlyCompletionCard count={filteredSummary.monthlyCompletedCount} totalAmount={filteredSummary.completedAmount} />
@@ -465,20 +402,20 @@ export function Dashboard() {
 
       {!selectedMemberId && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <MemberRanking stats={memberStats} yearlyStats={yearlyMemberStats} type="amount" period={rankingPeriod} onPeriodChange={setRankingPeriod} />
-          <MemberRanking stats={memberStats} yearlyStats={yearlyMemberStats} type="points" period={rankingPeriod} onPeriodChange={setRankingPeriod} />
+          <MemberRanking stats={data.memberStats} yearlyStats={data.yearlyMemberStats} type="amount" period={rankingPeriod} onPeriodChange={setRankingPeriod} />
+          <MemberRanking stats={data.memberStats} yearlyStats={data.yearlyMemberStats} type="points" period={rankingPeriod} onPeriodChange={setRankingPeriod} />
         </div>
       )}
 
       <RecentActivity tasks={filteredSummary.recentActivities} />
 
-      {/* v1.60: 分析・Tipsの構成（ツキちゃん削除） */}
+      {/* v1.61: SWR実装で爆速化 */}
       <div className="space-y-6 pt-4 border-t border-dark-700/50">
-        <AnalystInsight summary={summary} memberStats={memberStats} />
+        <AnalystInsight summary={data.summary} memberStats={data.memberStats} />
         <BusinessColumn />
       </div>
 
-      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.60</span></div>
+      <div className="flex justify-center pt-4 pb-8 opacity-20"><span className="text-[10px] font-mono text-dark-500">TeamFlow v1.61</span></div>
     </div>
   );
 }
