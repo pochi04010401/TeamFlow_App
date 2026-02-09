@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { MessageSquare } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import { calculatePercentage, getNowJST } from '@/lib/utils';
 import type { DashboardSummary, MemberStats } from '@/lib/types';
 
@@ -35,20 +35,14 @@ export function AnalystInsight({ summary, memberStats }: { summary: DashboardSum
   }, [summary, memberStats]);
 
   return (
-    <div className="card p-6 bg-gradient-to-br from-blue-500/10 to-transparent border-blue-500/20 relative overflow-hidden">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-glow">
-          <MessageSquare className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h3 className="text-sm font-black text-dark-100">見習いアナリストの現状分析</h3>
-          <p className="text-[10px] text-dark-400 font-bold uppercase tracking-widest">Progress Audit</p>
-        </div>
+    <div className="card p-5 border-dashed border-dark-600 bg-dark-800/30">
+      <div className="flex items-center gap-2 mb-3">
+        <TrendingUp className="w-4 h-4 text-accent-primary" />
+        <h4 className="text-[10px] font-black text-dark-400 uppercase tracking-widest">見習いアナリストの現状分析</h4>
       </div>
-      <p className="text-sm text-dark-200 leading-relaxed whitespace-pre-wrap font-medium relative z-10">
-        {insight}
+      <p className="text-xs text-dark-300 font-medium leading-relaxed italic whitespace-pre-wrap">
+        「{insight}」
       </p>
-      <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl" />
     </div>
   );
 }
