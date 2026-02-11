@@ -10,37 +10,41 @@ import {
   ArrowDownRight, Zap
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import useSWR from 'swr';
 import { formatCurrency, formatNumber, getCurrentMonth, getNowJST, calculatePercentage } from '@/lib/utils';
-import type { Task, Member, MonthlyGoal, DashboardSummary, MemberStats } from '@/lib/types';
+import type { Task, Member, MonthlyGoal } from '@/lib/types';
 import { ErrorDisplay } from './ErrorBoundary';
 
+const fetcher = async () => {
+  const supabase = createClient();
+  
+  // v1.62: Promise.allによる並列実行で爆速化
+  const [
+    { data: membersData },
+    { data: tasksData },
+    { data: goalsData }
+  ] = await Promise.all([
+    supabase.from('members').select('*'),
+    supabase.from('tasks').select('*, member:members(*)').in('status', ['pending', 'completed']),
+    supabase.from('monthly_goals').select('*').order('month', { ascending: false })
+  ]);
+  
+  return {
+    members: membersData || [],
+    tasks: (tasksData as Task[]) || [],
+    goals: goalsData || []
+  };
+};
+
 export function AnalyticsView() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [goals, setGoals] = useState<MonthlyGoal[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<'6months' | 'year' | 'all'>('6months');
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const supabase = createClient();
-      const { data: membersData } = await supabase.from('members').select('*');
-      const { data: tasksData } = await supabase.from('tasks').select('*, member:members(*)').in('status', ['pending', 'completed']);
-      const { data: goalsData } = await supabase.from('monthly_goals').select('*').order('month', { ascending: false });
-      setMembers(membersData || []);
-      setTasks(tasksData as Task[] || []);
-      setGoals(goalsData || []);
-    } catch (err) {
-      console.error(err);
-      setError('データの取得に失敗しました');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data, error, isLoading } = useSWR('analytics-data', fetcher, {
+    revalidateOnFocus: true,
+    revalidateIfStale: true
+  });
 
-  useEffect(() => { fetchData(); }, []);
+  const { tasks, members, goals } = data || { tasks: [], members: [], goals: [] };
 
   const monthlyData = useMemo(() => {
     const data: { [key: string]: any } = {};
@@ -115,8 +119,8 @@ export function AnalyticsView() {
     return { thisMonthRevenue: totalRevenue / 1000, avgTaskPrice: (thisMonthTasks.length > 0 ? totalRevenue / thisMonthTasks.length : 0) / 1000, growth, completedCount: thisMonthTasks.length };
   }, [tasks]);
 
-  if (loading) return <div className="p-20 text-center animate-pulse text-dark-400">データ分析中...</div>;
-  if (error) return <ErrorDisplay message={error} onRetry={fetchData} />;
+  if (isLoading) return <div className="p-20 text-center animate-pulse text-dark-400">データ分析中...</div>;
+  if (error) return <ErrorDisplay message="データの取得に失敗しました" onRetry={() => {}} />;
 
   return (
     <div className="space-y-6 animate-fade-in pb-32 px-2">

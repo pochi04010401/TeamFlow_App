@@ -19,7 +19,6 @@ import { ErrorDisplay } from './ErrorBoundary';
 import { MemberFilter } from './MemberFilter';
 import { toast } from 'sonner';
 import { BusinessColumn } from './BusinessColumn';
-import { AnalystInsight } from './AnalystInsight';
 
 // SWR用のFetcher
 const fetcher = async (key: string) => {
@@ -28,40 +27,33 @@ const fetcher = async (key: string) => {
   const now = getNowJST();
   const currentYear = now.getFullYear();
 
-  // 1. 目標データの取得
-  const { data: goalsData } = await supabase
-    .from('monthly_goals')
-    .select('*')
-    .eq('month', currentMonth);
-  
-  const goals = goalsData && goalsData.length > 0 ? goalsData[0] : null;
-
-  // 2. 今月のタスク取得範囲
   const startOfMonth = `${currentMonth}-01`;
   const [y, m] = currentMonth.split('-').map(Number);
   const lastDay = new Date(y, m, 0).getDate();
   const endOfMonth = `${currentMonth}-${String(lastDay).padStart(2, '0')}`;
-  
-  const { data: tasks, error: tasksError } = await supabase
-    .from('tasks')
-    .select('*, member:members(*)')
-    .in('status', ['pending', 'completed'])
-    .or(`start_date.lte.${endOfMonth},scheduled_date.lte.${endOfMonth}`)
-    .or(`end_date.gte.${startOfMonth},scheduled_date.gte.${startOfMonth}`);
+
+  // v1.62: Promise.allによる並列実行で爆速化
+  const [
+    { data: goalsData },
+    { data: tasks, error: tasksError },
+    { data: rawAllTasks },
+    { data: yearlyTasks },
+    { data: recentTasks },
+    { data: membersData }
+  ] = await Promise.all([
+    supabase.from('monthly_goals').select('*').eq('month', currentMonth),
+    supabase.from('tasks').select('*, member:members(*)').in('status', ['pending', 'completed'])
+      .or(`start_date.lte.${endOfMonth},scheduled_date.lte.${endOfMonth}`)
+      .or(`end_date.gte.${startOfMonth},scheduled_date.gte.${startOfMonth}`),
+    supabase.from('tasks').select('*, member:members(*)').neq('status', 'deleted').order('created_at', { ascending: false }),
+    supabase.from('tasks').select('*, member:members(*)').gte('completed_at', `${currentYear}-01-01`).lte('completed_at', `${currentYear}-12-31`).eq('status', 'completed'),
+    supabase.from('tasks').select('*').in('status', ['pending', 'completed']).order('completed_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(5),
+    supabase.from('members').select('*').order('created_at')
+  ]);
   
   if (tasksError) throw tasksError;
 
-  // 3. 全タスク（CSV用）
-  const { data: rawAllTasks } = await supabase
-    .from('tasks')
-    .select('*, member:members(*)')
-    .neq('status', 'deleted')
-    .order('created_at', { ascending: false });
-
-  // 4. 年間タスクと最近のアクティビティ
-  const { data: yearlyTasks } = await supabase.from('tasks').select('*, member:members(*)').gte('completed_at', `${currentYear}-01-01`).lte('completed_at', `${currentYear}-12-31`).eq('status', 'completed');
-  const { data: recentTasks } = await supabase.from('tasks').select('*').in('status', ['pending', 'completed']).order('completed_at', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }).limit(5);
-  const { data: membersData } = await supabase.from('members').select('*').order('created_at');
+  const goals = goalsData && goalsData.length > 0 ? goalsData[0] : null;
   
   const currentMonthTasks = (tasks || []).filter(t => {
     const start = t.start_date || t.scheduled_date;
@@ -411,7 +403,6 @@ export function Dashboard() {
 
       {/* v1.61: SWR実装で爆速化 */}
       <div className="space-y-6 pt-4 border-t border-dark-700/50">
-        <AnalystInsight summary={data.summary} memberStats={data.memberStats} />
         <BusinessColumn />
       </div>
 

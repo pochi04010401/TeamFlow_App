@@ -2,6 +2,7 @@
 
 import { Toaster } from 'sonner';
 import { ReactNode } from 'react';
+import { SWRConfig } from 'swr';
 
 interface ProvidersProps {
   children: ReactNode;
@@ -9,7 +10,13 @@ interface ProvidersProps {
 
 export function Providers({ children }: ProvidersProps) {
   return (
-    <>
+    <SWRConfig
+      value={{
+        revalidateOnFocus: true,
+        revalidateIfStale: true,
+        dedupingInterval: 5000, // 5秒間は同じリクエストを重複させない
+      }}
+    >
       {children}
       <Toaster
         position="top-center"
@@ -24,6 +31,6 @@ export function Providers({ children }: ProvidersProps) {
           },
         }}
       />
-    </>
+    </SWRConfig>
   );
 }
